@@ -25,7 +25,6 @@ end component;
 signal din,dout : std_logic_vector(31 downto 0);
 signal shift_val : std_logic_vector(4 downto 0);
 signal shift_lsl,shift_lsr,shift_asr,shift_ror ,shift_rrx,cout,cin : std_logic;
-signal cmd : std_logic_vector(1 downto 0);
 signal vdd,vss : bit;
 begin
 shifter1: Shifter
@@ -44,13 +43,44 @@ port map ( shift_lsl => shift_lsl,
 
 process
 	begin
-	shift_lsl = '1';
-	din<= "01111111111111111111111111111111";
-	shift_val<= "00001";	
-wait for 10 ms;
-	
+	cin <='0';
+	shift_lsl <= '0';
+	shift_asr <= '0';
+	shift_ror <= '0';
+	shift_rrx <= '1';
+	shift_lsr <= '0';
+	din<= "10000000000000000000000000000011";--00000000000000000000000000000000  11111111111111111111111111111111
+	shift_val<= "00011";	
+wait for 15 ms;
+	cin <='0';
+	shift_lsl <= '0';
+	shift_asr <= '0';
+	shift_ror <= '0';
+	shift_rrx <= '1';
+	shift_lsr <= '0';
+	din<= "11111111111111111111111111110000";
+	shift_val<= "00011";	
+wait for 15 ms;
+	cin <='0';
+	shift_lsl <= '0';
+	shift_asr <= '0';
+	shift_ror <= '0';
+	shift_rrx <= '1';
+	shift_lsr <= '0';
+	din<= "11111111111111111111111111111111";
+	shift_val<= "00011";	
+wait for 15 ms;
+	cin <='0';
+	shift_lsl <= '0';
+	shift_asr <= '0';
+	shift_ror <= '0';
+	shift_rrx <= '1';
+	shift_lsr <= '0';
+	din<= "11111111111110000111111111111111";
+	shift_val<= "00000";	
+wait for 15 ms;
 	assert dout="10000000000000000000000000000000" report "Erreur sur dout" severity error; 
-	assert cout='0'report "Erreur sur Cout" severity error;	
+	assert cout='0'report "erreur" severity error;	
 	assert false report "end of test" severity note;
 wait;
 end process;
