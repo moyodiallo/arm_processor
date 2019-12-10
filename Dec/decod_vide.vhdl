@@ -119,9 +119,9 @@ component reg
 		reg_cry		: out Std_Logic;
 		reg_zero		: out Std_Logic;
 		reg_neg		: out Std_Logic;
-		reg_cznv		: out Std_Logic;
+		reg_cznv		: out Std_Logic;--validite des flags c,z,n
 		reg_ovr		: out Std_Logic;
-		reg_vv		: out Std_Logic;
+		reg_vv		: out Std_Logic;--validite du flag v
 		
 	-- Invalidate Port 
 		inval_adr1	: in Std_Logic_Vector(3 downto 0);
@@ -448,7 +448,7 @@ begin
 					reg_v3		=> rvalid3,
                                           
 					reg_cry		=> cry,
-					reg_zero		=> zero,
+					reg_zero	=> zero,
 					reg_neg		=> neg,
 					reg_ovr		=> ovr,
 					               
@@ -474,40 +474,76 @@ begin
 					vss			=> vss);
 
 -- Execution condition
+--Test 4 bits de condition, si condition valide: cond <= 1 (cry,zero,neg,ovr). @TODO : revoir de A a D
+	cond <= '1'		when (if_ir(31 downto 28) = X"0" and zero = '1') 					or
+				     (if_ir(31 downto 28) = X"1" and zero = '0') 						or
+				     (if_ir(31 downto 28) = X"2" and cry = '1') 						or
+				     (if_ir(31 downto 28) = X"3" and cry = '0') 						or
+				     (if_ir(31 downto 28) = X"4" and neg = '1') 						or
+				     (if_ir(31 downto 28) = X"5" and neg = '0') 						or
+				     (if_ir(31 downto 28) = X"6" and ovr = '1') 						or
+				     (if_ir(31 downto 28) = X"7" and ovr = '0') 						or
+				     (if_ir(31 downto 28) = X"8" and cry='1' and zero = '0') 			or
+				     (if_ir(31 downto 28) = X"9" and (cry='0' or zero = '1')) 			or
+				     (if_ir(31 downto 28) = X"A" and (neg = ovr)) 						or
+				     (if_ir(31 downto 28) = X"B" and (neg = (not ovr))) 				or
+				     (if_ir(31 downto 28) = X"C" and zero = '0' and (neg = ovr))		or
+				     (if_ir(31 downto 28) = X"D" and (zero = '1' or (neg = (not ovr)))) or
+				     (if_ir(31 downto 28) = X"E")				else
+			'0';
 
-	cond <= '1' when	(if_ir(31 downto 28) = X"0" and zero = '1') or
-							(if_ir(31 downto 28) = X"1" and zero = '0') or
-							....
-							(if_ir(31 downto 28) = X"E") else '0';
-
+--validite de la condition  ???????	@TODO	
 	condv <= '1'		when if_ir(31 downto 28) = X"E" else
-				reg_cznv	when (if_ir(31 downto 28) = X"0" or
+		 reg_cznv 	when (if_ir(31 downto 28) = X"0" or
 									....
-									if_ir(31 downto 28) = X"9") else
+				if_ir(31 downto 28) = X"9") else
 
 
 
 -- decod instruction type
 
-	regop_t <= '1' when	if_ir(27 downto 26) = "00" and
-								mult_t = '0' and swap_t = '0' else '0';
-	mult_t <= '1' when	if_ir(27 downto 22) = "000000" and
-								if_ir(7 downto 4) = "1001" else '0';
-	swap_t <= '1' when	if_ir(27 downto 23) = "00010" and
-								if_ir(11 downto 4) = "00001001" else '0';
-	....
-
+	regop_t <= '1' when	if_ir(27 downto 26) = "00" and	mult_t = '0' and swap_t = '0' else '0';
+	mult_t <= '1' when	if_ir(27 downto 22) = "000000" and if_ir(7 downto 4) = "1001" else '0';
+	swap_t <= '1' when	if_ir(27 downto 23) = "00010" and if_ir(11 downto 4) = "00001001" else '0';
+	branch_t <= '1' when if_ir(27 downto 25) = "101" else '0';
+	trants_t <=	'1' when  if_ir(27 downto 26) = "01" else '0';
+	mtrants_t <= '1' when if_ir(27 downto 25) = "100" else '0';
 -- decod regop opcode
 
 	and_i <= '1' when regop_t = '1' and if_ir(24 downto 21) = X"0" else '0';
-	....
+	eor_i <= '1' when regop_t = '1' and if_ir(24 downto 21) = X"1" else '0';
+	sub_i <= '1' when regop_t = '1' and if_ir(24 downto 21) = X"2" else '0';
+	rsb_i <= '1' when regop_t = '1' and if_ir(24 downto 21) = X"3" else '0';
+	add_i <= '1' when regop_t = '1' and if_ir(24 downto 21) = X"4" else '0';
+	adc_i <= '1' when regop_t = '1' and if_ir(24 downto 21) = X"5" else '0';
+	sbc_i <= '1' when regop_t = '1' and if_ir(24 downto 21) = X"6" else '0';
+	rsc_i <= '1' when regop_t = '1' and if_ir(24 downto 21) = X"7" else '0';
+	tst_i <= '1' when regop_t = '1' and if_ir(24 downto 21) = X"8" else '0';
+	teq_i <= '1' when regop_t = '1' and if_ir(24 downto 21) = X"9" else '0';
+	cmp_i <= '1' when regop_t = '1' and if_ir(24 downto 21) = X"A" else '0';
+	cmn_i <= '1' when regop_t = '1' and if_ir(24 downto 21) = X"B" else '0';
+	orr_i <= '1' when regop_t = '1' and if_ir(24 downto 21) = X"C" else '0';
+	mov_i <= '1' when regop_t = '1' and if_ir(24 downto 21) = X"D" else '0';
+	bic_i <= '1' when regop_t = '1' and if_ir(24 downto 21) = X"E" else '0';
+	mvn_i <= '1' when regop_t = '1' and if_ir(24 downto 21) = X"F" else '0';
+	
 -- mult instruction
+	mul_i <= '1' when mult_t = '1' and if_ir(21) = '0';
+	mla_i <= '1' when mult_t = '1' and if_ir(21) = '1';
 
 -- trans instruction
+	ldr_i <= '1' when trants_t = '1' and if_ir(20) = '1' and if_ir(22) = '0';
+	str_i <= '1' when trants_t = '1' and  if_ir(20) = '0' and if_ir(22) = '0';
+	ldrb_i <= '1' when trants_t = '1' and  if_ir(20) = '1' and if_ir(22) = '1';
+	strb_i <= '1' when trants_t = '1' and  if_ir(20) = '0' and if_ir(22) = '1';
 
 -- mtrans instruction
+	ldm_i <= '1' when mtrants_t = '1' and if_ir(20) = '1';
+	stm_i <= '1' when mtrants_t = '1' and if_ir(20) = '0';
 
 -- branch instruction
+	b_i <= '1' when branch_t = '1' and if_ir(24) = '0';
+	bl_i  <= '1' when branch_t = '1' and if_ir(24) = '1';
 
 -- Decode interface operands
 	op1 <=	reg_pc		when branch_t = '1'					else
@@ -576,13 +612,13 @@ begin
 	shift_ror <=
 	shift_rrx <=
 
-	shift_val <=	"00010"							when branch_t = '1'							else
+	shift_val <=	"00010"	when branch_t = '1' else
 
 -- Alu operand selection
-	comp_op1	<= '1' when rsb_i = '1' or 
-	comp_op2	<=	'1' when sub_i = '1' or 
+	comp_op1 <=	'1' when rsb_i = '1' or 
+	comp_op2 <=	'1' when sub_i = '1' or 
 
-	alu_cy <=	'1'				when sub_i = '1' or
+	alu_cy <=	'1' when sub_i = '1' or
 
 -- Alu command
 
