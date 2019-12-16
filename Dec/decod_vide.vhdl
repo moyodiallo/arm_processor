@@ -7,7 +7,7 @@ entity Decod is
 	-- Exec  operands
 			dec_op1			: out Std_Logic_Vector(31 downto 0); -- first alu input
 			dec_op2			: out Std_Logic_Vector(31 downto 0); -- shifter input
-			dec_exe_dest	: out Std_Logic_Vector(3 downto 0); -- Rd destination
+			dec_exe_dest		: out Std_Logic_Vector(3 downto 0); -- Rd destination
 			dec_exe_wb		: out Std_Logic; -- Rd destination write back
 			dec_flag_wb		: out Std_Logic; -- CSPR modifiy
 
@@ -33,7 +33,7 @@ entity Decod is
 	-- Alu operand selection
 			dec_comp_op1	: out Std_Logic;
 			dec_comp_op2	: out Std_Logic;
-			dec_alu_cy 		: out Std_Logic;
+			dec_alu_cy 	: out Std_Logic;
 
 	-- Exec Synchro
 			dec2exe_empty	: out Std_Logic;
@@ -67,7 +67,7 @@ entity Decod is
 
 	-- Mem Write back to reg
 			mem_res			: in Std_Logic_Vector(31 downto 0);
-			mem_dest			: in Std_Logic_Vector(3 downto 0);
+			mem_dest		: in Std_Logic_Vector(3 downto 0);
 			mem_wb			: in Std_Logic;
 			
 	-- global interface
@@ -421,18 +421,18 @@ begin
 					vss		 => vss);
 
 	reg_inst  : reg
-	port map(	wdata1		=> exe_res,
-					wadr1			=> exe_dest,
-					wen1			=> exe_wb,
+	port map(			wdata1		=> exe_res,
+					wadr1		=> exe_dest,
+					wen1		=> exe_wb,
                                           
 					wdata2		=> mem_res,
-					wadr2			=> mem_dest,
-					wen2			=> mem_wb,
+					wadr2		=> mem_dest,
+					wen2		=> mem_wb,
                                           
-					wcry			=> exe_c,
-					wzero			=> exe_z,
-					wneg			=> exe_n,
-					wovr			=> exe_v,
+					wcry		=> exe_c,
+					wzero		=> exe_z,
+					wneg		=> exe_n,
+					wovr		=> exe_v,
 					cspr_wb		=> exe_flag_wb,
 					               
 					reg_rd1		=> rdata1,
@@ -475,29 +475,44 @@ begin
 
 -- Execution condition
 --Test 4 bits de condition, si condition valide: cond <= 1 (cry,zero,neg,ovr). @TODO : revoir de A a D
-	cond <= '1'		when (if_ir(31 downto 28) = X"0" and zero = '1') 					or
-				     (if_ir(31 downto 28) = X"1" and zero = '0') 						or
-				     (if_ir(31 downto 28) = X"2" and cry = '1') 						or
-				     (if_ir(31 downto 28) = X"3" and cry = '0') 						or
-				     (if_ir(31 downto 28) = X"4" and neg = '1') 						or
-				     (if_ir(31 downto 28) = X"5" and neg = '0') 						or
-				     (if_ir(31 downto 28) = X"6" and ovr = '1') 						or
-				     (if_ir(31 downto 28) = X"7" and ovr = '0') 						or
+	cond <= '1'		when (if_ir(31 downto 28) = X"0" and zero = '1') 				or
+				     (if_ir(31 downto 28) = X"1" and zero = '0') 				or
+				     (if_ir(31 downto 28) = X"2" and cry = '1') 				or
+				     (if_ir(31 downto 28) = X"3" and cry = '0') 				or
+				     (if_ir(31 downto 28) = X"4" and neg = '1') 				or
+				     (if_ir(31 downto 28) = X"5" and neg = '0') 				or
+				     (if_ir(31 downto 28) = X"6" and ovr = '1') 				or
+				     (if_ir(31 downto 28) = X"7" and ovr = '0') 				or
 				     (if_ir(31 downto 28) = X"8" and cry='1' and zero = '0') 			or
 				     (if_ir(31 downto 28) = X"9" and (cry='0' or zero = '1')) 			or
-				     (if_ir(31 downto 28) = X"A" and (neg = ovr)) 						or
-				     (if_ir(31 downto 28) = X"B" and (neg = (not ovr))) 				or
+				     (if_ir(31 downto 28) = X"A" and (neg = ovr)) 				or
+				     (if_ir(31 downto 28) = X"B" and (neg = (not ovr))) 			or
 				     (if_ir(31 downto 28) = X"C" and zero = '0' and (neg = ovr))		or
-				     (if_ir(31 downto 28) = X"D" and (zero = '1' or (neg = (not ovr)))) or
-				     (if_ir(31 downto 28) = X"E")				else
+				     (if_ir(31 downto 28) = X"D" and (zero = '1' or (neg = (not ovr)))) 	or
+				     (if_ir(31 downto 28) = X"E")						else
 			'0';
 
---validite de la condition  ???????	@TODO	
-	condv <= '1'		when if_ir(31 downto 28) = X"E" else
-		 reg_cznv 	when (if_ir(31 downto 28) = X"0" or
-									....
-				if_ir(31 downto 28) = X"9") else
-
+--validite de la condition 		
+	condv <= '1'			when if_ir(31 downto 28) = X"E" 	else
+	
+		 reg_cznv	 	when (if_ir(31 downto 28) = X"0" or
+					      if_ir(31 downto 28) = X"1" or				
+					      if_ir(31 downto 28) = X"2" or				
+					      if_ir(31 downto 28) = X"3" or				
+					      if_ir(31 downto 28) = X"4" or				
+					      if_ir(31 downto 28) = X"5" or				
+					      if_ir(31 downto 28) = X"8" or				
+					      if_ir(31 downto 28) = X"9")	else		  
+					      
+		reg_vv			when (if_ir(31 downto 28) = X"6" or		     
+					     if_ir(31 downto 28) = X"7") 	else
+					     
+		(reg_vv and reg_cznv) 	when (if_ir(31 downto 28) = X"A" or
+					      if_ir(31 downto 28) = X"B" or
+					      if_ir(31 downto 28) = X"C" or
+					      if_ir(31 downto 28) = X"D") 	else
+					      
+		'0';
 
 
 -- decod instruction type
@@ -545,7 +560,7 @@ begin
 	b_i <= '1' when branch_t = '1' and if_ir(24) = '0';
 	bl_i  <= '1' when branch_t = '1' and if_ir(24) = '1';
 
--- Decode interface operands
+-- Decode interface operands ????
 	op1 <=	reg_pc		when branch_t = '1'					else
 				....
 				rdata1;
@@ -558,7 +573,7 @@ begin
 	alu_dest <=	 ..... else
 					if_ir(19 downto 16);
 
-	alu_wb	<= '1'			when	
+	alu_wb	<= '1'	when	
 					'0';
 
 	flag_wb	<= 
@@ -629,7 +644,7 @@ begin
 	process (ck)
 	begin
 		if (rising_edge(ck)) then
-		....
+
 		end if;
 	end process;
 
@@ -697,7 +712,7 @@ process (cur_state, dec2if_full, cond, condv, operv, dec2exe_full, if2dec_empty,
 			branch_t, and_i, eor_i, sub_i, rsb_i, add_i, adc_i, sbc_i, rsc_i, orr_i, mov_i, bic_i,
 			mvn_i, ldr_i, ldrb_i, ldm_i, stm_i, if_ir, mtrans_rd, mtrans_mask_shift)
 begin
-	case cur_state is
+	case cur_state is--(FETCH, RUN, BRANCH, LINK, MTRANS);
 
 	when FETCH =>
 		debug_state <= X"1";
@@ -706,12 +721,20 @@ begin
 		blink <= '0';
 		mtrans_shift <= '0';
 		mtrans_loop_adr <= '0';
-
+		
 		if dec2if_full = '0' and reg_pcv = '1' then
-		....
+			next_state <= RUN;
+		else 
+			next_state <= FETCH;
 		end if;
+	
+	when RUN =>
 			
-
+	when LINK =>
+	
+	when BRANCH =>
+	
+	when MTRANS =>
 	
 	end case;
 end process;
