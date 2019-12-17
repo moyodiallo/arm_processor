@@ -516,13 +516,13 @@ begin
 
 
 -- decod instruction type
-
 	regop_t <= '1' when	if_ir(27 downto 26) = "00" and	mult_t = '0' and swap_t = '0' else '0';
 	mult_t <= '1' when	if_ir(27 downto 22) = "000000" and if_ir(7 downto 4) = "1001" else '0';
 	swap_t <= '1' when	if_ir(27 downto 23) = "00010" and if_ir(11 downto 4) = "00001001" else '0';
 	branch_t <= '1' when if_ir(27 downto 25) = "101" else '0';
 	trants_t <=	'1' when  if_ir(27 downto 26) = "01" else '0';
 	mtrants_t <= '1' when if_ir(27 downto 25) = "100" else '0';
+
 -- decod regop opcode
 
 	and_i <= '1' when regop_t = '1' and if_ir(24 downto 21) = X"0" else '0';
@@ -567,7 +567,8 @@ begin
 
 	offset32 <=	
 
-	op2	<=  ....
+	op2	<=	("000000" & if_ir(23 downto 0) & "11")	when branch_t = '1'	else  
+				....
 				rdata2;
 
 	alu_dest <=	 ..... else
@@ -620,20 +621,21 @@ begin
 
 -- Shifter command
 
-	shift_lsl <=
+	shift_lsl <= '1' when regop_t = '1' and if_ir(25) = '0' and if_ir(6 downto 5) = "00" else 0;
 
-	shift_lsr <=
-	shift_asr <= 
-	shift_ror <=
-	shift_rrx <=
+	shift_lsr <= '1' when regop_t = '1' and if_ir(25) = '0' and if_ir(6 downto 5) = "01" else 0;
+	shift_asr <= '1' when regop_t = '1' and if_ir(25) = '0' and if_ir(6 downto 5) = "10" else 0;
+	shift_ror <= '1' when regop_t = '1' and if_ir(25) = '0' and if_ir(6 downto 5) = "11" and shift_val /= "00000" else 0; 
+	shift_rrx <= '1' when regop_t = '1' and if_ir(25) = '0' and if_ir(6 downto 5) = "11" and shift_val = "00000" else 0;
 
-	shift_val <=	"00010"	when branch_t = '1' else
+	shift_val <= if_ir(11 downto 7)	'1' when regop_t = '1' and if_ir(25) = '0' and if_ir(4) = '0' else 
+			            --lire la valeur du reg ...
 
 -- Alu operand selection
 	comp_op1 <=	'1' when rsb_i = '1' or 
 	comp_op2 <=	'1' when sub_i = '1' or 
 
-	alu_cy <=	'1' when sub_i = '1' or
+	alu_cy <=	'1' when sub_i = '1' or  branch_t = '1'
 
 -- Alu command
 
@@ -741,3 +743,5 @@ end process;
 
 dec_pop <= if2dec_pop;
 end Behavior;
+
+-- dec_pc <= reg_pc
