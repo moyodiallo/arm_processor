@@ -45,10 +45,10 @@ entity Decod is
 	-- Exe Write Back to reg
 			exe_res			: in Std_Logic_Vector(31 downto 0);
 
-			exe_c				: in Std_Logic;
-			exe_v				: in Std_Logic;
-			exe_n				: in Std_Logic;
-			exe_z				: in Std_Logic;
+			exe_c			: in Std_Logic;
+			exe_v			: in Std_Logic;
+			exe_n			: in Std_Logic;
+			exe_z			: in Std_Logic;
 
 			exe_dest		: in Std_Logic_Vector(3 downto 0); -- Rd destination
 			exe_wb			: in Std_Logic; -- Rd destination write back
@@ -102,17 +102,17 @@ component reg
 		
 	-- Read Port 1 32 bits
 		reg_rd1		: out Std_Logic_Vector(31 downto 0);
-		radr1			: in Std_Logic_Vector(3 downto 0);
+		radr1		: in Std_Logic_Vector(3 downto 0);
 		reg_v1		: out Std_Logic;
 
 	-- Read Port 2 32 bits
 		reg_rd2		: out Std_Logic_Vector(31 downto 0);
-		radr2			: in Std_Logic_Vector(3 downto 0);
+		radr2		: in Std_Logic_Vector(3 downto 0);
 		reg_v2		: out Std_Logic;
 
 	-- Read Port 3 32 bits
 		reg_rd3		: out Std_Logic_Vector(31 downto 0);
-		radr3			: in Std_Logic_Vector(3 downto 0);
+		radr3		: in Std_Logic_Vector(3 downto 0);
 		reg_v3		: out Std_Logic;
 
 	-- read CSPR Port
@@ -494,10 +494,26 @@ begin
 				else '0';
 
 --validite de la condition  ???????	@TODO	
-	condv <= '1'	when if_ir(31 downto 28) = X"E" else
-		 reg_cznv 	when (if_ir(31 downto 28) = X"0" or
-									....
-				if_ir(31 downto 28) = X"9") else
+	condv <= '1'	when if_ir(31 downto 28) = X"E" 	else
+		
+	reg_cznv	 	when (if_ir(31 downto 28) = X"0" or
+					if_ir(31 downto 28) = X"1" or				
+					if_ir(31 downto 28) = X"2" or				
+					if_ir(31 downto 28) = X"3" or				
+					if_ir(31 downto 28) = X"4" or				
+					if_ir(31 downto 28) = X"5" or				
+					if_ir(31 downto 28) = X"8" or				
+					if_ir(31 downto 28) = X"9")	
+					else		  
+					
+	reg_vv			when 	(if_ir(31 downto 28) = X"6" or		     
+							if_ir(31 downto 28) = X"7") 	
+					else
+	(reg_vv and reg_cznv) 	when 	(if_ir(31 downto 28) = X"A" or
+									if_ir(31 downto 28) = X"B" or
+									if_ir(31 downto 28) = X"C" or
+									if_ir(31 downto 28) = X"D") 	
+					else '0';
 
 
 
@@ -546,56 +562,64 @@ begin
 	bl_i <= '1' when branch_t = '1' and if_ir(24) = '1';
 
 -- Decode interface operands
-	op1 <=	reg_pc		when branch_t = '1'					else
-				....
-				rdata1;
+	op1 <=	reg_pc		when branch_t = '1'					
+						else rdata1;
 
-	offset32 <=	
+	offset32 <=	("000000" & if_ir(23 downto 0));
 
-	op2	<=  ....
-				rdata2;
+	op2	<=	offset32	 	  				when branch_t = '1'	 or
+	op2 <=  (X"0000000" & if(7 downto 0)) 	when if(25) = '1'  -- si op2 est immediat												
+											else rdata2;
 
-	alu_dest <=	 ..... else
-					if_ir(19 downto 16);
+	alu_dest <=	 X'E' 	when branch_t = '1' --on ecrit dans le pc 
+						else if_ir(19 downto 16);
 
-	alu_wb	<= '1'			when	
-					'0';
-
-	flag_wb	<= 
+	alu_wb	<= '1'	when not (if_ir(24 downto 23) = '10') and regop_t = '1' --unitiles pour les instructions comparaison et test
+					else '0';
+ 
+	flag_wb	<= '1' 	when if_ir(24 downto 23) = '10' and regop_t = '1' --pour les instructions de comparaisons et test
+					else  if(20); --S (comme MOVS mis-a-jour du flag)
 
 -- reg read
-	radr1 <= 
+	radr1 <= if_ir(15 down 12)	when mult_t = '1' -- op1 different
+								else if_ir(19 downto 16); -- op1 meme pour le reste
 				
-	radr2 <=
+	radr2 <= if_ir(3 downto 0);
 
-	radr3 <=
+	radr3 <= if_ir(11 downto 8); -- pour la multiplication mla_i
 
 -- Reg Invalid
 
-	inval_exe_adr <= ...... else
-							if_ir(15 downto 12);
+	-- l'addresse de destination la plupart du temps
+	inval_exe_adr <=  if_ir(19 downto 16)	when mult_t = '1' 
+											else if_ir(15 downto 12);
 
-	inval_exe <=	'1'	when	....
-						'0';
+	-- on invalid des registres on ecrit pas a la fin de l'instruction
+	inval_exe <=	'1'	when not (if_ir(24 downto 23) = '10')
+						else '0';
 
-	inval_mem_adr <=	....
-							mtrans_rd;
+	inval_mem_adr <= if_ir(19 downto 16) 	when swap_t = '1' 
+											else mtrans_rd;
 
-	inval_mem <=	'1'	when		....		else
-						'0';
+	inval_mem <=	'1'	when mtrants_t = '1' or swap_t = '1' 
+						else '0';
 
-	inval_czn <=
-			
-
-	inval_ovr <=
+	-- S = 1 ou instruction de comparaison ou test
+	inval_czn <= '1' 	when (if_ir(20) = '1' or if_ir(24 downto 23) = '10') and regop_t = '1'
+						else '0';
+	
+	-- meme cas que inval_czn
+	inval_ovr <= 	when if_ir(20) = '1' or if_ir(24 downto 23) = '10' and regop_t = '1'
+					else '0';
 
 -- operand validite
 
-	operv <=	'1' when  ...
-				'0';
+	operv <=	'1' when rvalid1 = '1' and rvalid2 = '1' and rvalid3 = '1' and mult_t = '1'
+					when rvalid1 = '1' and rvalid2 = '1' and regop_t = '1'
+					else '0';
 
 -- Decode to mem interface 
-	ld_dest <= 
+	ld_dest   <= 
 	pre_index <=
 
 	mem_lw <= 
@@ -612,7 +636,8 @@ begin
 	shift_ror <=
 	shift_rrx <=
 
-	shift_val <=	"00010"	when branch_t = '1' else
+	shift_val <=	"00010"	when branch_t = '1' 
+							else ... ; 
 
 -- Alu operand selection
 	comp_op1 <=	'1' when rsb_i = '1' or 
@@ -708,6 +733,14 @@ begin
 		if dec2if_full = '0' and reg_pcv = '1' then
 		....
 		end if;
+
+	when RUN =>
+			
+	when LINK =>
+		
+	when BRANCH =>
+		
+	when MTRANS =>
 	
 	
 
