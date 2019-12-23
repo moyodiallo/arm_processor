@@ -1,0 +1,112 @@
+------------------------------------------------------------------------------------------
+Explication du banc de register:
+    > 
+
+
+
+--------------------------------------------------------------------------------
+Explication de DECOD:
+    
+    > decod interface operands 
+        - "op1" & "op2" : Consiste a decoder les operandes.
+        - "alu_dest" :Trouver le registre de destination.
+        - "alu_wb" : mettre a jour les registres de destination ? (0 ou 1)
+        - "flag_wb" : mettre a jour les flags (0 ou 1)
+
+    > reg read (utilisation des port de lectures)
+        - "radr1" : adresse a renseigner au port 1, pour les data de "op1" (rdata1)
+        - "radr2" : adresse a renseigner au port 2, pour les data de "op2" (rdata2)
+        - "radr1" : adresse a renseigner au port 3, pour certaines inst speciales
+
+    > reg Invalid (les register a invalider pour pouvoir ecrire la decu)
+        - "inval_exe_adr" : le register destination a invalider
+        - "inval_exe" : pour valeur "1", invalide "inval_exe_adr" sinon "0"
+        - "inval_mem_adr" : pour une seconde dest, utilser pour les transfert mem 
+        - "inval_mem" : "1" invalide "inval_mem_adr" sinon "0"
+        - "inval_czn" : conserne les flags c & z & n, "1" invalide sinon "0"
+        - "inval_ovr" : invlider l'overflow v, "1" invalide sinon "0"
+        --- Remarque:
+
+    > operand validite:
+        "operv" : pour savoir si l'Execution peu commencer, se bansant sur rvalid{1,2,3}
+                comme le resultat de op1 et op2 par exemple est une lecture sur des registres
+                on ne peut lire que quand le registre est valide c-a-d, s'il est invalide il est 
+                probablement en cours d'ecriture ou attente d'ecriture.
+
+    > decod to mem interface
+
+    > Shifter command:
+
+    > Alu operand selection 
+
+    > Alu command
+    
+    > Mtrans reg list
+        - "mtrans_mask_shift": pour permetre une mis-a-jour du mtrans_mask a chaque etape, 
+            c-a-d que les precedents sont mis a 0. mtrans_mask <= mtrans_mask & mtrans_mask_shift
+        - "mtrans_mask": le mask sur les registers a traiter a tout instant
+        - "mtrans_nbr": le nombre de registre que reste a etre traiter
+        - "mtrans_list": la liste des registre qui reste a traiter
+        - "mtrans_rd": prochain register a traiter, le registre de destination
+        - "mtrans_1un": quand le multi-transfert n'a qu'un seule registr a traiter
+
+------------------------------------------------------------------------------------------------
+Explication de Exec:
+
+
+---------------------------------------------------------------------------------------------------------
+Explication sur la machine a etat du DECOD
+    > FETCH: apres demarage Decod envoi une valeur vers Ifetch
+        - reste quand la fifo vers Ifetch est pleine
+        - change vers RUN une valeur PC ecrite dans dec2if
+    > RUN: traitements des instructions
+        - reste:  "if2dec" vide, "dec2exe" pleine ou predicat invalid, une 
+            new valeur PC envoyer vers Ifetch si dec2if n'est pas pleine
+        - reste aussi: le predicat est faux, instruction a rejeter
+        - reste aussi: le predicat est vrai, instruction a executer
+        - change: l'instruction est un appel de fonction (vers LINK)
+        - change: l'instruction est un branchement (vers BRANCH)
+        - change: l'instruction est un transfert multiple (vers MTRANS)
+    > LINK:
+        pris systematiquement: calcul de la nouvelle valeur PC par EXEC (puis vers BRANCH)
+    > BRANCH:
+    > MTRANS: 
+
+        Remarque: 
+            - predicat faux: il arrive que les conditions de l'instruction 
+                sont faux donc on passe a la suivante sans execution
+            - predicat invalid: il arrive que certains registers ne sont pas toute suite 
+                disponible exemple un cas de dependance, donc on est obliger d'attendre
+                c-a-d rester sur l'etat RUN jusqu'a la disponibilites des registers.
+            - predicat vrai: toutes les conditions sont valide, donc executer l'instruction 
+                c-a-d envoyer sur EXEC
+
+
+------------------------------------------------------------------------------------------------
+Question:
+    > pourquoi on a separer les 
+
+
+
+
+
+
+------------------- Divers --------------------------------------- 
+dec_exe_dest	: in Std_Logic_Vector(3 downto 0); -- Rd destination
+dec_exe_wb		: in Std_Logic; -- Rd destination write back
+dec_flag_wb		: in Std_Logic; -- CSPR modifiy
+
+//pour des entree qui seront renvoyer comme tel au decode
+// par 
+exe_dest		: out Std_Logic_Vector(3 downto 0); -- Rd destination
+exe_wb			: out Std_Logic; -- Rd destination write back
+exe_flag_wb		: out Std_Logic; -- CSPR modifiy
+
+pour avoir des directement les resultats sans passer par MEM,
+afin d'eviter d'avoir plus de cycle unitile pour certaines instruction
+
+Est-ce que c'est possible pour le Dec de donner les trucs a exectuer sans les pusher ?
+Non on utilise toujours les fifos
+
+pre_index: donnner a la memoire si ca va ala memoire,
+    sinon non. retourner a exe_res le resultat 

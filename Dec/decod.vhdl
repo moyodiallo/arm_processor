@@ -339,9 +339,9 @@ begin
 
 	dec2exec : fifo_127b
 	port map (	din(126) => pre_index,
-					din(125 downto 94) => op1,
-					din(93 downto 62)	 => op2,
-					din(61 downto 58)	 => alu_dest,
+					din(125 downto 94) 	=> op1,
+					din(93 downto 62)	=> op2,
+					din(61 downto 58)	=> alu_dest,
 					din(57)	 => alu_wb,
 					din(56)	 => flag_wb,
 
@@ -357,8 +357,8 @@ begin
 					din(13)	 => shift_asr,
 					din(12)	 => shift_ror,
 					din(11)	 => shift_rrx,
-					din(10 downto 6)	 => shift_val,
-					din(5)	 => cry,
+					din(10 downto 6) => shift_val,
+					din(5)	 		 => cry,
 
 					din(4)	 => comp_op1,
 					din(3)	 => comp_op2,
@@ -366,12 +366,12 @@ begin
 
 					din(1 downto 0)	 => alu_cmd,
 
-					dout(126)	 => dec_pre_index,
+					dout(126)	 		 => dec_pre_index,
 					dout(125 downto 94)	 => dec_op1,
 					dout(93 downto 62)	 => dec_op2,
 					dout(61 downto 58)	 => dec_exe_dest,
-					dout(57)	 => dec_exe_wb,
-					dout(56)	 => dec_flag_wb,
+					dout(57)	 		 => dec_exe_wb,
+					dout(56)	 		 => dec_flag_wb,
 
 					dout(55 downto 24)	 => dec_mem_data,
 					dout(23 downto 20)	 => dec_mem_dest,
@@ -421,30 +421,30 @@ begin
 					vss		 => vss);
 
 	reg_inst  : reg
-	port map(	wdata1		=> exe_res,
-					wadr1			=> exe_dest,
-					wen1			=> exe_wb,
+	port map(		wdata1		=> exe_res,
+					wadr1		=> exe_dest,
+					wen1		=> exe_wb,
                                           
 					wdata2		=> mem_res,
-					wadr2			=> mem_dest,
-					wen2			=> mem_wb,
+					wadr2		=> mem_dest,
+					wen2		=> mem_wb,
                                           
-					wcry			=> exe_c,
-					wzero			=> exe_z,
-					wneg			=> exe_n,
-					wovr			=> exe_v,
+					wcry		=> exe_c,
+					wzero		=> exe_z,
+					wneg		=> exe_n,
+					wovr		=> exe_v,
 					cspr_wb		=> exe_flag_wb,
 					               
 					reg_rd1		=> rdata1,
-					radr1			=> radr1,
+					radr1		=> radr1,
 					reg_v1		=> rvalid1,
                                           
 					reg_rd2		=> rdata2,
-					radr2			=> radr2,
+					radr2		=> radr2,
 					reg_v2		=> rvalid2,
                                           
 					reg_rd3		=> rdata3,
-					radr3			=> radr3,
+					radr3		=> radr3,
 					reg_v3		=> rvalid3,
                                           
 					reg_cry		=> cry,
@@ -496,14 +496,14 @@ begin
 --validite de la condition  ???????	@TODO	
 	condv <= '1'	when if_ir(31 downto 28) = X"E" 	else
 		
-	reg_cznv	 	when (if_ir(31 downto 28) = X"0" or
-					if_ir(31 downto 28) = X"1" or				
-					if_ir(31 downto 28) = X"2" or				
-					if_ir(31 downto 28) = X"3" or				
-					if_ir(31 downto 28) = X"4" or				
-					if_ir(31 downto 28) = X"5" or				
-					if_ir(31 downto 28) = X"8" or				
-					if_ir(31 downto 28) = X"9")	
+	reg_cznv	 	when if_ir(31 downto 28) = X"0" or
+						 if_ir(31 downto 28) = X"1" or				
+						 if_ir(31 downto 28) = X"2" or				
+						 if_ir(31 downto 28) = X"3" or				
+						 if_ir(31 downto 28) = X"4" or				
+						 if_ir(31 downto 28) = X"5" or				
+						 if_ir(31 downto 28) = X"8" or				
+						 if_ir(31 downto 28) = X"9"	
 					else		  
 					
 	reg_vv			when 	(if_ir(31 downto 28) = X"6" or		     
@@ -523,7 +523,7 @@ begin
 	swap_t 		<= '1' when	if_ir(27 downto 23) = "00010" and if_ir(11 downto 4) = "00001001" else '0';
 	branch_t 	<= '1' when if_ir(27 downto 25) = "101" else '0';
 	trants_t 	<= '1' when if_ir(27 downto 26) = "01" else '0';
-	mtrants_t 	<= '1' when if_ir(27 downto 25) = "100" else '0';
+	mtrans_t 	<= '1' when if_ir(27 downto 25) = "100" else '0';
 
 -- decod regop opcode
 	and_i <= '1' when regop_t = '1' and if_ir(24 downto 21) = X"0" else '0';
@@ -548,14 +548,14 @@ begin
 	mla_i <= '1' when mult_t = '1' and if_ir(21) = '1' else 0;
 
 -- trans instruction
-	ldr_i <= '1' when trants_t = '1' and if_ir(20) = '1' and if_ir(22) = '0';
-	str_i <= '1' when trants_t = '1' and  if_ir(20) = '0' and if_ir(22) = '0';
+	ldr_i  <= '1' when trants_t = '1' and  if_ir(20) = '1' and if_ir(22) = '0';
+	str_i  <= '1' when trants_t = '1' and  if_ir(20) = '0' and if_ir(22) = '0';
 	ldrb_i <= '1' when trants_t = '1' and  if_ir(20) = '1' and if_ir(22) = '1';
 	strb_i <= '1' when trants_t = '1' and  if_ir(20) = '0' and if_ir(22) = '1';
 
 -- mtrans instruction
-	ldm_i <= '1' when mtrants_t = '1' and if_ir(20) = '1';
-	stm_i <= '1' when mtrants_t = '1' and if_ir(20) = '0';
+	ldm_i <= '1' when mtrans_t = '1' and if_ir(20) = '1';
+	stm_i <= '1' when mtrans_t = '1' and if_ir(20) = '0';
 
 -- branch instruction
 	b_i  <= '1' when branch_t = '1' and if_ir(24) = '0';
@@ -566,45 +566,55 @@ begin
 						else rdata1;
 
 	offset32 <=	("000000" & if_ir(23 downto 0));
-
-	op2	<=	offset32	 	  				when branch_t = '1'	 or
-	op2 <=  (X"0000000" & if(7 downto 0)) 	when if(25) = '1'  -- si op2 est immediat												
+	
+	op2	<=	offset32	 	  					  when branch_t = '1'	 or
+	
+	-- op2 est immediat
+	op2 <= (X"0000000" & if_ir(7 downto 0))       when if_ir(25) = '1' and regop_t = '1' -- data transfert
+	op2 <= (X"00000" & "0000" if_ir(11 downto 0)) when if_ir(25) = '1' and trans_t = '1'
 											else rdata2;
 
-	alu_dest <=	 X'E' 	when branch_t = '1' --on ecrit dans le pc 
+	alu_dest <=	 X'E' 	when branch_t = '1' -- ecrire dans PC
 						else if_ir(19 downto 16);
 
-	alu_wb	<= '1'	when not (if_ir(24 downto 23) = '10') and regop_t = '1' --unitiles pour les instructions comparaison et test
+	alu_wb	<= '1'	when not (if_ir(24 downto 23) = '10') and regop_t = '1' --unitiles pour TST, TEQ, CMP
 					else '0';
  
-	flag_wb	<= '1' 	when if_ir(24 downto 23) = '10' and regop_t = '1' --pour les instructions de comparaisons et test
+	flag_wb	<= '1' 	when if_ir(24 downto 23) = '10' and regop_t = '1' --pour les TST, TEQ, CMP
 					else  if(20); --S (comme MOVS mis-a-jour du flag)
 
 -- reg read
-	radr1 <= if_ir(15 down 12)	when mult_t = '1' -- op1 different
-								else if_ir(19 downto 16); -- op1 meme pour le reste
-				
+	-- Rn register
+	radr1 <= if_ir(15 down 12)	when mult_t = '1'
+								else if_ir(19 downto 16);
+	-- Rm register
 	radr2 <= if_ir(3 downto 0);
 
-	radr3 <= if_ir(11 downto 8); -- pour la multiplication mla_i
+	-- Rs , pour mla_i , multiplication avec A <- 0 
+	radr3 <= if_ir(11 downto 8);
 
 -- Reg Invalid
 
-	-- l'addresse de destination la plupart du temps
+	-- Rd register
 	inval_exe_adr <=  if_ir(19 downto 16)	when mult_t = '1' 
+					  X"E" 					when branch_t = '1'
 											else if_ir(15 downto 12);
-
-	-- on invalid des registres on ecrit pas a la fin de l'instruction
-	inval_exe <=	'1'	when not (if_ir(24 downto 23) = '10')
+	-- invalide Rd
+	inval_exe <=	'1'	when not (if_ir(24 downto 23) = '10') --pas TST, TEQ, CMP
+					'1' when branch_t = '1'
 						else '0';
 
-	inval_mem_adr <= if_ir(19 downto 16) 	when swap_t = '1' 
+	-- Rn register ou R14 pour branch_t
+	inval_mem_adr <= if_ir(19 downto 16) 	when swap_t = '1'
+					X"14"					when branch_t = '1'
 											else mtrans_rd;
 
-	inval_mem <=	'1'	when mtrants_t = '1' or swap_t = '1' 
+	-- invalide Rn
+	inval_mem	<=	'1'	when mtrans_t = '1' or swap_t = '1'
+					'1' when bl_i = '1'
 						else '0';
 
-	-- S = 1 ou instruction de comparaison ou test
+	-- S = 1 ou les instructions TST, TEQ, CMP
 	inval_czn <= '1' 	when (if_ir(20) = '1' or if_ir(24 downto 23) = '10') and regop_t = '1'
 						else '0';
 	
@@ -614,9 +624,10 @@ begin
 
 -- operand validite
 
-	operv <=	'1' when rvalid1 = '1' and rvalid2 = '1' and rvalid3 = '1' and mult_t = '1'
-					when rvalid1 = '1' and rvalid2 = '1' and regop_t = '1'
-					else '0';
+	operv <= '1' when rvalid1 = '1' and rvalid2 = '1' and rvalid3 = '1' and mult_t = '1' or
+				 when rvalid1 = '1' and rvalid2 = '1' and regop_t = '1' or
+				 when rvalid1 = '1' and rvalid2 = '1' and swap_t = '1'
+				 else '0';
 
 -- Decode to mem interface 
 	ld_dest   <= 
@@ -657,22 +668,22 @@ begin
 		end if;
 	end process;
 
-	mtrans_mask_shift <= X"FFFE" when if_ir(0) = '1' and mtrans_mask(0) = '1' else
-								X"FFFC" when if_ir(1) = '1' and mtrans_mask(1) = '1' else
-								X"FFF8" when if_ir(2) = '1' and mtrans_mask(2) = '1' else
-								X"FFF0" when if_ir(3) = '1' and mtrans_mask(3) = '1' else
-								X"FFE0" when if_ir(4) = '1' and mtrans_mask(4) = '1' else
-								X"FFC0" when if_ir(5) = '1' and mtrans_mask(5) = '1' else
-								X"FF80" when if_ir(6) = '1' and mtrans_mask(6) = '1' else
-								X"FF00" when if_ir(7) = '1' and mtrans_mask(7) = '1' else
-								X"FE00" when if_ir(8) = '1' and mtrans_mask(8) = '1' else
-								X"FC00" when if_ir(9) = '1' and mtrans_mask(9) = '1' else
-								X"F800" when if_ir(10) = '1' and mtrans_mask(10) = '1' else
-								X"F000" when if_ir(11) = '1' and mtrans_mask(11) = '1' else
-								X"E000" when if_ir(12) = '1' and mtrans_mask(12) = '1' else
-								X"C000" when if_ir(13) = '1' and mtrans_mask(13) = '1' else
-								X"8000" when if_ir(14) = '1' and mtrans_mask(14) = '1' else
-								X"0000";
+	mtrans_mask_shift <= X"FFFE" when if_ir(0)  = '1' and mtrans_mask(0)  = '1' else
+						 X"FFFC" when if_ir(1)  = '1' and mtrans_mask(1)  = '1' else
+						 X"FFF8" when if_ir(2)  = '1' and mtrans_mask(2)  = '1' else
+						 X"FFF0" when if_ir(3)  = '1' and mtrans_mask(3)  = '1' else
+						 X"FFE0" when if_ir(4)  = '1' and mtrans_mask(4)  = '1' else
+						 X"FFC0" when if_ir(5)  = '1' and mtrans_mask(5)  = '1' else
+						 X"FF80" when if_ir(6)  = '1' and mtrans_mask(6)  = '1' else
+						 X"FF00" when if_ir(7)  = '1' and mtrans_mask(7)  = '1' else
+						 X"FE00" when if_ir(8)  = '1' and mtrans_mask(8)  = '1' else
+						 X"FC00" when if_ir(9)  = '1' and mtrans_mask(9)  = '1' else
+						 X"F800" when if_ir(10) = '1' and mtrans_mask(10) = '1' else
+						 X"F000" when if_ir(11) = '1' and mtrans_mask(11) = '1' else
+						 X"E000" when if_ir(12) = '1' and mtrans_mask(12) = '1' else
+						 X"C000" when if_ir(13) = '1' and mtrans_mask(13) = '1' else
+						 X"8000" when if_ir(14) = '1' and mtrans_mask(14) = '1' else
+						 X"0000";
 
 	mtrans_list <= if_ir(15 downto 0) and mtrans_mask;
 
@@ -682,22 +693,23 @@ begin
 
 	mtrans_1un <= '1' when mtrans_nbr = "00001" else '0';
 
-	mtrans_rd <=	X"0" when mtrans_list(0) = '1' else
-						X"1" when mtrans_list(1) = '1' else
-						X"2" when mtrans_list(2) = '1' else
-						X"3" when mtrans_list(3) = '1' else
-						X"4" when mtrans_list(4) = '1' else
-						X"5" when mtrans_list(5) = '1' else
-						X"6" when mtrans_list(6) = '1' else
-						X"7" when mtrans_list(7) = '1' else
-						X"8" when mtrans_list(8) = '1' else
-						X"9" when mtrans_list(9) = '1' else
-						X"A" when mtrans_list(10) = '1' else
-						X"B" when mtrans_list(11) = '1' else
-						X"C" when mtrans_list(12) = '1' else
-						X"D" when mtrans_list(13) = '1' else
-						X"E" when mtrans_list(14) = '1' else
-						X"F";
+	-- Rd register
+	mtrans_rd <=	X"0" when mtrans_list(0)  = '1' else
+					X"1" when mtrans_list(1)  = '1' else
+					X"2" when mtrans_list(2)  = '1' else
+					X"3" when mtrans_list(3)  = '1' else
+					X"4" when mtrans_list(4)  = '1' else
+					X"5" when mtrans_list(5)  = '1' else
+					X"6" when mtrans_list(6)  = '1' else
+					X"7" when mtrans_list(7)  = '1' else
+					X"8" when mtrans_list(8)  = '1' else
+					X"9" when mtrans_list(9)  = '1' else
+					X"A" when mtrans_list(10) = '1' else
+					X"B" when mtrans_list(11) = '1' else
+					X"C" when mtrans_list(12) = '1' else
+					X"D" when mtrans_list(13) = '1' else
+					X"E" when mtrans_list(14) = '1' else
+					X"F";
 
 -- FSM
 process (ck)
