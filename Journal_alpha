@@ -1,6 +1,23 @@
 ------------------------------------------------------------------------------------------
 Explication du banc de register:
-    > 
+    > 2 PORT pour ecrire:
+        - 1 port pour la destination toutes les instructions qui detiennent
+            des destinations. (exe_res, exe_dest, exe_wb)
+    
+        - 1 port pour certains instructions qui ecrivent dans un registre 
+            autre que la destination exemple:  Branch and link (R14<=PC);
+            Swap (Rn <= Rm)
+            Destiner normalement pour mem, mais c'est possible de l'utiliser
+            dans l'exec si necessaire. (mem_res, mem_dest, mem_wb).
+            Utile pour mettre le calcul d'adresse avant de notifier a MEM
+
+    > 3 PORT pour lire 
+        Le 1er port est prioritaire devant le 2eme
+        - 1 port pour op1 => Rn registre 
+        - 1 port pour op2 => Rm registre 
+        - 1 port otre     => Rs registre
+        + certaines instructions demandent jusqu'a 3 lecture de donnes. par 
+        exemple: mult_t; swap_t; 
 
 
 
@@ -52,27 +69,54 @@ Explication de DECOD:
 
 ------------------------------------------------------------------------------------------------
 Explication de Exec:
+    &&&&&&&&&&&&&&&&&&
+        + L'exec contient l'ALU et Shifter, sur le modele d'architecture, qu'on 
+        modelise il n'y a pas de multiplication, donc il ya une possibilite de 
+        l'ajouter en ajoutant un bit dans la fifo dec2exec. C'est-a-dire pour la 
+        garantir a un cycle.
+        + Le muliplieur soit il est sequentiel ou combinatoire:
+            - combinatoire on a plus de place occuper puisqu'il faut dupliquer l'ALU et le Shifter
+            - sequentiel moins de place , mais traiter avec plus de cycles contrairement au combinatoire
+            dont le traitement se fait en 1 cycle. 
+    &&&&&&&&&&&&&&
 
+    > ALU 
+        - commandes(dec_alu_cmd): 00 => add | 01 => and | 10 => or | 11 => xor
+
+    > SHIFTER
+
+    > MULIPLIER
+        - On privilegie le multiplieur sequentiel, permet aussi d'avoir etage de EXEC
+            moins dense et plus simplifier.
 
 ---------------------------------------------------------------------------------------------------------
 Explication sur la machine a etat du DECOD
     > FETCH: apres demarage Decod envoi une valeur vers Ifetch
         - reste quand la fifo vers Ifetch est pleine
-        - change vers RUN une valeur PC ecrite dans dec2if
+        - quitte vers RUN une valeur PC ecrite dans dec2if
+
     > RUN: traitements des instructions
         - reste:  "if2dec" vide, "dec2exe" pleine ou predicat invalid, une 
             new valeur PC envoyer vers Ifetch si dec2if n'est pas pleine
         - reste aussi: le predicat est faux, instruction a rejeter
         - reste aussi: le predicat est vrai, instruction a executer
-        - change: l'instruction est un appel de fonction (vers LINK)
-        - change: l'instruction est un branchement (vers BRANCH)
-        - change: l'instruction est un transfert multiple (vers MTRANS)
-    > LINK:
-        pris systematiquement: calcul de la nouvelle valeur PC par EXEC (puis vers BRANCH)
-    > BRANCH:
-    > MTRANS: 
+        - quitte: l'instruction est un appel de fonction (vers LINK)
+        - quitte: l'instruction est un branchement (vers BRANCH)
+        - quitte: l'instruction est un transfert multiple (vers MTRANS)
 
-        Remarque: 
+    > LINK:
+        pris systematiquement: calcul de la nouvelle valeur PC par EXEC 
+        (puis vers BRANCH)
+
+    > BRANCH:
+        - reste: if2dec est vide
+        - quitte: if2dec n'est pas vide(vers RUN)
+        
+    > MTRANS: 
+        - reste: desqu'il reste au moins une donnee a transferer
+        - quitte: plus rien a transferer(vers RUN)
+
+    Remarque: 
             - predicat faux: il arrive que les conditions de l'instruction 
                 sont faux donc on passe a la suivante sans execution
             - predicat invalid: il arrive que certains registers ne sont pas toute suite 
@@ -81,32 +125,29 @@ Explication sur la machine a etat du DECOD
             - predicat vrai: toutes les conditions sont valide, donc executer l'instruction 
                 c-a-d envoyer sur EXEC
 
+---------------------------------------------------------------------------------------------------------
+Descriptions de instructions
+    > traitements de donnees:
+        - regop
 
-------------------------------------------------------------------------------------------------
-Question:
-    > pourquoi on a separer les 
+    > Swap:
+        <SWP>{cond}{B} Rd,Rm,[Rn] , B = 1 => load byte, B = 0 => load word 
+        - swap_t: 
+            Rd <= [Rn]
+            Rn <= Rm
 
+    > Mutiplication: 
+        Rd <= Rm * Rs + Rn si A=1 sinon Rd <= Rm * Rs 
+        - mla_i: op1 <= Rm; op2 <= Rs; 
+            dec_mem_data <=  Rn (puisqu'il est accessible par exec)
+        - mul_i: op1 <= Rm; op2 <= Rs;
 
+    > transferts de donnees:
+        - trans:
+            Load:
+            Store:
 
-
-
-
-------------------- Divers --------------------------------------- 
-dec_exe_dest	: in Std_Logic_Vector(3 downto 0); -- Rd destination
-dec_exe_wb		: in Std_Logic; -- Rd destination write back
-dec_flag_wb		: in Std_Logic; -- CSPR modifiy
-
-//pour des entree qui seront renvoyer comme tel au decode
-// par 
-exe_dest		: out Std_Logic_Vector(3 downto 0); -- Rd destination
-exe_wb			: out Std_Logic; -- Rd destination write back
-exe_flag_wb		: out Std_Logic; -- CSPR modifiy
-
-pour avoir des directement les resultats sans passer par MEM,
-afin d'eviter d'avoir plus de cycle unitile pour certaines instruction
-
-Est-ce que c'est possible pour le Dec de donner les trucs a exectuer sans les pusher ?
-Non on utilise toujours les fifos
-
-pre_index: donnner a la memoire si ca va ala memoire,
-    sinon non. retourner a exe_res le resultat 
+    > multi transferts de donnees:
+        - mtrans:
+            Load:
+            Store:
