@@ -1,5 +1,8 @@
 ------------------------------------------------------------------------------------------
 Explication du banc de register:
+
+    la lecture n'est pas synchroniser avec l'horloge
+
     > 2 PORT pour ecrire:
         - 1 port pour la destination toutes les instructions qui detiennent
             des destinations. (exe_res, exe_dest, exe_wb)
@@ -17,7 +20,11 @@ Explication du banc de register:
         - 1 port pour op2 => Rm registre 
         - 1 port otre     => Rs registre
         + certaines instructions demandent jusqu'a 3 lecture de donnes. par 
-        exemple: mult_t; swap_t; 
+        exemple: mult_t; swap_t;
+
+    > Important: Dans l'incrementation du pc tenir compte de quand on 
+        veut incrementer le pc et ecrite dans le pc
+        donc pc <= val + 4 
 
 
 
@@ -67,33 +74,22 @@ Explication de DECOD:
         - "mtrans_rd": prochain register a traiter, le registre de destination
         - "mtrans_1un": quand le multi-transfert n'a qu'un seule registr a traiter
 
+    + Il ya un cycle qui separe MEM et DECOD, ce qui reste interessant.
+
 ------------------------------------------------------------------------------------------------
 Explication de Exec:
-    &&&&&&&&&&&&&&&&&&
-        + L'exec contient l'ALU et Shifter, sur le modele d'architecture, qu'on 
-        modelise il n'y a pas de multiplication, donc il ya une possibilite de 
-        l'ajouter en ajoutant un bit dans la fifo dec2exec. C'est-a-dire pour la 
-        garantir a un cycle.
-        + Le muliplieur soit il est sequentiel ou combinatoire:
-            - combinatoire on a plus de place occuper puisqu'il faut dupliquer l'ALU et le Shifter
-            - sequentiel moins de place , mais traiter avec plus de cycles contrairement au combinatoire
-            dont le traitement se fait en 1 cycle. 
-    &&&&&&&&&&&&&&
-
     > ALU 
         - commandes(dec_alu_cmd): 00 => add | 01 => and | 10 => or | 11 => xor
 
     > SHIFTER
 
-    > MULIPLIER
-        - On privilegie le multiplieur sequentiel, permet aussi d'avoir etage de EXEC
-            moins dense et plus simplifier.
 
 ---------------------------------------------------------------------------------------------------------
 Explication sur la machine a etat du DECOD
     > FETCH: apres demarage Decod envoi une valeur vers Ifetch
         - reste quand la fifo vers Ifetch est pleine
-        - quitte vers RUN une valeur PC ecrite dans dec2if
+        - quitte vers RUN une valeur PC ecrite dans 
+            dec2if (inc_pc <= dec2if_push)
 
     > RUN: traitements des instructions
         - reste:  "if2dec" vide, "dec2exe" pleine ou predicat invalid, une 
@@ -102,6 +98,7 @@ Explication sur la machine a etat du DECOD
         - reste aussi: le predicat est vrai, instruction a executer
         - quitte: l'instruction est un appel de fonction (vers LINK)
         - quitte: l'instruction est un branchement (vers BRANCH)
+            il faut que 
         - quitte: l'instruction est un transfert multiple (vers MTRANS)
 
     > LINK:
@@ -111,6 +108,7 @@ Explication sur la machine a etat du DECOD
     > BRANCH:
         - reste: if2dec est vide
         - quitte: if2dec n'est pas vide(vers RUN)
+        + c'est-a-dire, il reste coincer dans jusqu'a ce que le PC soit valide
         
     > MTRANS: 
         - reste: desqu'il reste au moins une donnee a transferer
@@ -142,6 +140,16 @@ Descriptions de instructions
             dec_mem_data <=  Rn (puisqu'il est accessible par exec)
         - mul_i: op1 <= Rm; op2 <= Rs;
 
+        - la multiplication est un process dans DECOD:
+            + pour l'instant la seule solution avec ce modele d'architecture
+                c-a-d en utilisant l'ALU et le SHIFTER dans EXEC
+                on est obliger de faire 32 cycles max. 
+            + pour l'ameliorer on est obliger de rajouter un shifter dans
+                DECOD pour pouvoir eviter les cycles de se cote,
+                pour utiliser l'algo de booth's (https://www.youtube.com/watch?v=QFXaddi-Ag8) 
+                par exemple ou autre. 
+
+
     > transferts de donnees:
         - trans:
             Load:
@@ -151,3 +159,15 @@ Descriptions de instructions
         - mtrans:
             Load:
             Store:
+
+
+--------------------------
+A retenir
+
+    + On fait un pop quand on termine un traitement.
+    + quand une instruction est decoder elle commence a s'excuter au 
+        prochain cycle.
+    + lors d'un traiement candencer avec une horloge, visualiser 
+        a l'instant le traiement.
+    + IMPORTANT: les dependance Write after Read doivent etre pris en compte
+        pour la validite de l'operation
