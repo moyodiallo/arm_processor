@@ -16,7 +16,7 @@ entity IFetch is
 			if_pop			: out Std_Logic;
 			dec_pc			: in Std_Logic_Vector(31 downto 0) ;
 
-			if_ir				: out Std_Logic_Vector(31 downto 0) ;
+			if_ir			: out Std_Logic_Vector(31 downto 0) ;
 			if2dec_empty	: out Std_Logic;
 			dec_pop			: in Std_Logic;
 
@@ -34,10 +34,10 @@ architecture Behavior OF IFetch is
 component fifo_32b
 	port(
 		din		: in std_logic_vector(31 downto 0);
-		dout		: out std_logic_vector(31 downto 0);
+		dout	: out std_logic_vector(31 downto 0);
 
 		-- commands
-		push		: in std_logic;
+		push	: in std_logic;
 		pop		: in std_logic;
 
 		-- flags
@@ -45,7 +45,7 @@ component fifo_32b
 		empty		: out std_logic;
 
 		reset_n	: in std_logic;
-		ck			: in std_logic;
+		ck		: in std_logic;
 		vdd		: in bit;
 		vss		: in bit
 	);
