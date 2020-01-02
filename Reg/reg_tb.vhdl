@@ -122,7 +122,7 @@ finished <= '0';
 
 process
 begin
-	for i in 0 to 20 loop
+	for i in 0 to 50 loop
 		ck <= not ck after 5 ms;
 		wait for 5 ms;
 	end loop; 	
@@ -153,6 +153,7 @@ wait for 10 ms;
 wait for 10 ms;
 	radr2 <= "0001";
 wait for 10 ms;
+	inc_pc <= '1';
 	radr2 <= "0010";
 wait for 10 ms;
 	radr2 <= "0011";
@@ -172,6 +173,7 @@ wait for 10 ms;
 	radr2 <= "1010";
 wait for 10 ms;
 	radr2 <= "1011";
+	inc_pc <= '0';
 wait for 10 ms;
 	radr2 <= "1100";
 wait for 10 ms;

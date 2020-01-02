@@ -735,61 +735,58 @@ begin
 	case cur_state is
 
 	when FETCH =>
-		
+		--prof
 		debug_state <= X"1";
 		if2dec_pop <= '0';
 		dec2exe_push <= '0';
 		blink <= '0';
-		
 		mtrans_shift <= '0';
 		mtrans_loop_adr <= '0';
-
-		if dec2if_full = '1' and dec2if_empty = '0' then
-			next_state <= FETCH;
-		else if_pop = '1' then
-			next_state <= RUN;
-		else 
-			next_state <= FETCH;
+		--ajout
+		dec2if_push <= '1';
+		if dec2if_full = '0' and reg_pcv = '1' then --T1
+				dec2if_push <= '1';-- a revoir
+				next_state <= FETCH;
+		else if dec2if_full = '1' then --T2
+				next_state <= RUN;
 		end if;
+
 
 	when RUN =>
+		--mtrans_shift <= '0';
+		--mtrans_loop_adr <= '0';
+		if if2dec_empty = '1' or dec2exe_full = '1' or condv = '0' then --T1 : attendre ..
+			if dec2if_full = '0' then
+				dec2if_push <= '1';
+			else then 
+				dec2if_push <= '0';
+			end if;
+		next_state <= RUN;
 		
-		mtrans_shift <= '0';
-		mtrans_loop_adr <= '0';
-
-		
-		dec2if_push <= '1' when reg_pcv      = '1' or 
-								dec2if_empty = '1' or
-								branch_t     = '0'    -- R14 <= PC+4 au prochain cycle
-							else 0;
-
-							\\ trans all like
-
-		-- si la fifo if2dec pas vide, donc on passe a l'inst suivante
-		if if2dec_empty = '0' then
-			if2dec_pop <= '1';
-		else 
-			if2dec_pop <= '0';
-		end if;
-		
-		-- on donne la main au prochain cycle horloge le EXEC
-		if condv = '0' or dec2exe_full = '1' then
-			dec2exe_push <= '0';
-		else if operv = '1' and condv = '1' and dec2exe_empty = '1' then
-			dec2exe_push <= 1;
-		end if;
-
-		-- on change de d'etat
-		if if2dec_empty = '1' or dec2exe_full = '1' or operv = '0' then
+		else if cond = '0' then --T2 : Predicat faux
+			if2dec_pop <= '1';-- jeter l'instruction (pop)
 			next_state <= RUN;
-		else if branch_t = '1' then
-			next_state <= BRANCH;
-		else if mtrans_t = '1' then
-			next_state <= MTRANS;
-		else 
-			next_state = RUN;
-		end if;
 		
+		else if cond = '1' then -- T3 : Predicat vrai
+			--executer l instruction
+				dec2exe_push <= '1';--???
+				if2dec_pop <='1';
+				
+				next_state <= RUN; ---???
+				
+		else if branch_t = '1' and bl_i = '1' then -- T4 : Appel fonction
+			next_state <= LINK;
+			
+		else if branch_t = '1' and  b_i = '1' then -- T5 : Branchement
+			next_state <= BRANCH;
+		
+		else if mtrans_t = '1' then -- T6 : Transfert multiple
+			next_state <= MTRANS;
+		
+		----------------------------------------------------------------------
+		
+		
+
 	when BRANCH =>
 
 		mtrans_shift <= '0';

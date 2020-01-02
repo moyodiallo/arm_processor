@@ -80,10 +80,10 @@ begin
 		--active low reset
 		if(reset_n = '0') then
 			for i in invals'range loop
-				  invals(i) <= '0';
+				  invals(i) <= '1';
 			end loop; 	
-			cznv <= '0';
-			vv <= '0';
+			cznv <= '1';
+			vv <= '1';
 		end if;
 		-- write 2 	
 		if(wen2 = '1') then
