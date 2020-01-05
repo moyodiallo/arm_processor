@@ -36,12 +36,6 @@ begin
 				fifo_v <= '0';
 			else
 				if fifo_v = '0' then
-					if push = '1' then
-						fifo_v <= '1';
-					else
-						fifo_v <= '0';
-					end if;
-				else
 					if pop = '1' then
 						if push = '1' then
 							fifo_v <= '1';
@@ -50,6 +44,13 @@ begin
 						end if;
 					else
 						fifo_v <= '1';
+					end if;
+					
+				else
+					if push = '1' then
+						fifo_v <= '1';
+					else
+						fifo_v <= '0';
 					end if;
 				end if;
 			end if;
