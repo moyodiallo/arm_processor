@@ -1,6 +1,8 @@
 LIBRARY ieee;
 use ieee.std_logic_1164.all;
 use ieee.std_logic_unsigned.all;
+USE ieee.numeric_std.ALL;
+
 
 ENTITY fifo_32b_tb IS
 END entity;
@@ -67,8 +69,9 @@ begin
 
 		process
 		begin
-					wait for 3 ns;
+					wait for 10 ns;
 					for i in 1 to 32 loop
+
 						din <= count;
 						if empty = '1' then
 							push   <= '1';
@@ -78,11 +81,12 @@ begin
 
 						if full = '1' then pop <= '1'; else pop <= '0'; end if;
 
-						wait for 1 ns;
+						wait for 2 ns;
 
 					end loop;
 
 					report "cool";
+					report integer'image(to_integer(unsigned(count)));
 					wait;
 
 		end process;
@@ -91,9 +95,11 @@ begin
 		begin
 			count <= X"00000000";
 			reset_n <= '0';
-			wait for 1 ns;
-			reset_n <= '1';
-			wait for 1 ns;
+	ck <= '0';
+	wait for 1 ns;
+	ck <= '1';
+	wait for 1 ns;
+	reset_n <= '1';
 
 			for i in 1 to 16 loop
 				ck <= '0';

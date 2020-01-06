@@ -35,7 +35,13 @@ begin
 			if reset_n = '0' then
 				fifo_v <= '0';
 			else
-				if fifo_v = '1' then
+				if fifo_v = '0' then
+					if push = '1' then
+						fifo_v <= '1';
+					else
+						fifo_v <= '0';
+					end if;
+				else
 					if pop = '1' then
 						if push = '1' then
 							fifo_v <= '1';
@@ -44,12 +50,6 @@ begin
 						end if;
 					else
 						fifo_v <= '1';
-					end if;
-				else
-					if push = '1' then
-						fifo_v <= '1';
-					else
-						fifo_v <= '0';
 					end if;
 				end if;
 			end if;
@@ -64,7 +64,7 @@ begin
 			end if;
 		end if;
 	end process;
-
+	
 	full <= '1' when fifo_v = '1' and pop = '0' else '0';
 	empty <= not fifo_v;
 	dout <= fifo_d;
