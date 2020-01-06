@@ -1,5 +1,5 @@
 GHDL=ghdl
-GHDL_OP = -v
+GHDL_OP = -v --ieee=synopsys -fexplicit
 C_MOD_DIR = ../C_model/
 all : main_tb
 
@@ -18,32 +18,32 @@ main_tb.o : main_tb.vhdl icache.o dcache.o ram.o
 arm_core.o : arm_core.vhdl ifetch.o decod.o exec.o mem.o
 	${GHDL} -a ${GHDL_OP} arm_core.vhdl
 	
-ifetch.o : ifetch.vhdl fifo_generic.o
+ifetch.o : ifetch.vhdl fifo_32b.o
 	${GHDL} -a ${GHDL_OP} ifetch.vhdl
 
-decod.o : ../DECOD/decod.vhdl fifo_32b.o fifo_127b.o reg.o
-	${GHDL} -a ${GHDL_OP} ../DECOD/decod.vhdl
+decod.o : decod.vhdl fifo_32b.o fifo_127b.o reg.o
+	${GHDL} -a ${GHDL_OP} decod.vhdl
 
-reg.o : ../DECOD/reg.vhdl 
-	${GHDL} -a ${GHDL_OP} ../DECOD/reg.vhdl
+reg.o : reg.vhdl 
+	${GHDL} -a ${GHDL_OP} reg.vhdl
 
-exec.o : ../EXEC/exec.vhdl fifo_72b.o alu.o shifter.o
-	${GHDL} -a ${GHDL_OP} ../EXEC/exec.vhdl
+exec.o : exec.vhdl fifo_72b.o alu.o shifter.o
+	${GHDL} -a ${GHDL_OP} exec.vhdl
 
-fifo_72b.o : ../FIFO/fifo_72b.vhdl
-	${GHDL} -a ${GHDL_OP} ../FIFO/fifo_72b.vhdl
+fifo_72b.o : fifo_72b.vhdl
+	${GHDL} -a ${GHDL_OP} fifo_72b.vhdl
 
-fifo_32b.o : ../FIFO/fifo_32b.vhdl
-	${GHDL} -a ${GHDL_OP} ../FIFO/fifo_32b.vhdl
+fifo_32b.o : fifo_32b.vhdl
+	${GHDL} -a ${GHDL_OP} fifo_32b.vhdl
 
-fifo_127b.o : ../FIFO/fifo_127b.vhdl
-	${GHDL} -a ${GHDL_OP} ../FIFO/fifo_127b.vhdl
+fifo_127b.o : fifo_127b.vhdl
+	${GHDL} -a ${GHDL_OP} fifo_127b.vhdl
 
-alu.o : ../EXEC/alu.vhdl
-	${GHDL} -a ${GHDL_OP} ../EXEC/alu.vhdl
+alu.o : alu.vhdl
+	${GHDL} -a ${GHDL_OP} alu.vhdl
 
-shifter.o : ../EXEC/shifter.vhdl
-	${GHDL} -a ${GHDL_OP} ../EXEC/shifter.vhdl
+shifter.o : shifter.vhdl
+	${GHDL} -a ${GHDL_OP} shifter.vhdl
 
 mem.o : mem.vhdl
 	${GHDL} -a ${GHDL_OP} mem.vhdl

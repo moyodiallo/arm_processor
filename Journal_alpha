@@ -71,7 +71,7 @@ Explication de DECOD:
         - "mtrans_mask": le mask sur les registers a traiter a tout instant
         - "mtrans_nbr": le nombre de registre que reste a etre traiter
         - "mtrans_list": la liste des registre qui reste a traiter
-        - "mtrans_rd": prochain register a traiter, le registre de destination
+        - "mtrans_rd": prochain register a traiter, le registre de dest ou source
         - "mtrans_1un": quand le multi-transfert n'a qu'un seule registr a traiter
 
     + Il ya un cycle qui separe MEM et DECOD, ce qui reste interessant.
@@ -79,13 +79,23 @@ Explication de DECOD:
 ------------------------------------------------------------------------------------------------
 Explication de Exec:
     > ALU 
-        - commandes(dec_alu_cmd): 00 => add | 01 => and | 10 => or | 11 => xor
+        - commandes(dec_alu_cmd):
+             00 => add | 01 => and | 10 => or | 11 => xor
 
-    > SHIFTER
+    > SHIFTER 
+        - Rm qui correspond a l'op2 qui est shifter
 
 
 ---------------------------------------------------------------------------------------------------------
 Explication sur la machine a etat du DECOD
+    Dans le decode il faut satisfaire les instructions selon leur cycle:
+        - regop_t   : 1 cycle
+        - mult_t    : 1 cycle + m cycle interne
+        - branch_t  : 2 cycle
+        - mtrans_t  : 15 cycle
+        - trans_t   : 1 cycle
+
+
     > FETCH: apres demarage Decod envoi une valeur vers Ifetch
         - reste quand la fifo vers Ifetch est pleine
         - quitte vers RUN une valeur PC ecrite dans 
@@ -103,7 +113,10 @@ Explication sur la machine a etat du DECOD
 
     > LINK:
         pris systematiquement: calcul de la nouvelle valeur PC par EXEC 
-        (puis vers BRANCH)
+        (puis vers BRANCH).
+        Il faut Remarquer dans le decode d'une instruction le PC est deja a PC+8, a cause
+        du prefetch, c-a-d que quand decode deja a PC+8, la fifo if2dec contient PC et
+        l'inst PC+4 est entrain d'etre recuperer par IFetch.
 
     > BRANCH:
         - reste: if2dec est vide
@@ -129,16 +142,19 @@ Descriptions de instructions
         - regop
 
     > Swap:
+        - pas valeur immediat
         <SWP>{cond}{B} Rd,Rm,[Rn] , B = 1 => load byte, B = 0 => load word 
         - swap_t: 
             Rd <= [Rn]
             Rn <= Rm
 
-    > Mutiplication: 
+    > Mutiplication:
+        - pas de valeur immediat
         Rd <= Rm * Rs + Rn si A=1 sinon Rd <= Rm * Rs 
         - mla_i: op1 <= Rm; op2 <= Rs; 
             dec_mem_data <=  Rn (puisqu'il est accessible par exec)
         - mul_i: op1 <= Rm; op2 <= Rs;
+        - c'est possible de comfondre mla_i & mul_i avec Rn=0 pour mul_i 
 
         - la multiplication est un process dans DECOD:
             + pour l'instant la seule solution avec ce modele d'architecture
@@ -152,7 +168,10 @@ Descriptions de instructions
 
     > transferts de donnees:
         - trans:
-            Load:
+            les complement peuvent etre utilise "comp_op{1,2}"
+            avec les pre_index = 0, on prend l'op1 = Rn
+
+            Load: 
             Store:
 
     > multi transferts de donnees:
@@ -160,6 +179,17 @@ Descriptions de instructions
             Load:
             Store:
 
+------------------------------------------------------------------------
+Comment ecrire des Test compiler
+    > Le TME3 vlsi umpc est peut etre comme reference
+    > (Voir Main/main_tb)
+        Dans programme qu'il faut tester sur le processor
+        pour savoir s'il a reussi le test ou pas il doit avoir
+        des branchement _good et _bad, il doit se mettre sur
+        un des branchement pour que le simulateur s'arrete
+        les 2 branchment sont connu apres le chargement
+        voir(C_model/src/mem.c).
+    > On peut compiler un programme en C et le linker avec "sections.lds"
 
 --------------------------
 A retenir
@@ -171,3 +201,8 @@ A retenir
         a l'instant le traiement.
     + IMPORTANT: les dependance Write after Read doivent etre pris en compte
         pour la validite de l'operation
+
+
+
+       >  LA FIFO A COrriger
+

@@ -16,4 +16,7 @@ cp Fifo/fifo_32b.vhdl   build/fifo_32b.vhdl
 cp ALU/alu.vhdl         build/alu.vhdl
 cp Shifter/shifter.vhdl build/shifter.vhdl
 cp Mem/mem.vhdl         build/mem.vhdl
-echo "Do makefile in 'build' directory, you must have ghdl"
+cd build
+make
+echo "compilation finished !"
+echo "to launch: ./build/main_tb"
