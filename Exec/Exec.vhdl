@@ -121,7 +121,6 @@ component fifo_72b
 		-- commands
 		push	: in std_logic;
 		pop		: in std_logic;
-		pop		: in std_logic;
 
 		-- flags
 		full		: out std_logic;
@@ -139,56 +138,60 @@ signal alu_op1, alu_op2 : std_logic_vector(31 downto 0);
 signal alu_cout: std_logic;
 
 -- signaux intermediaire du shifter
+signal shift_op2  : std_logic_vector(31 downto 0);
 signal shift_dout : std_logic_vector(31 downto 0);
 signal shift_cout : std_logic;
 
 -- signaux dans le shifter
-signal mem_adr : std_logic_vector(31 downto 0); 
+signal mem_adr  : std_logic_vector(31 downto 0); 
 signal exe_push : std_logic;
 
+signal exe2mem_full : std_logic;
+signal res :  std_logic_vector(31 downto 0);
+
+begin
 
 --  Component instantiation.
 	alu_inst : alu
 	port map (	
-		op1 	=> alu_op1			
-		op2		=> alu_op2
-		cin		=> dec_alu_cy
+		op1 	=> alu_op1,		
+		op2		=> alu_op2,
+		cin		=> dec_alu_cy,
 
-		cmd		=> dec_alu_cmd
+		cmd		=> dec_alu_cmd,
 
-		res		=> exe_res
-		cout	=> alu_cout
-		z		=> exe_z
-		n		=> exe_n
-		v		=> exe_v
+		res		=> res,
+		cout	=> alu_cout,
+		z		=> exe_z,
+		n		=> exe_n,
+		v		=> exe_v,
 
-					vdd 	=> vdd
-					vss		=> vss);
+		vdd 	=> vdd,
+		vss		=> vss);
 
 	shifter_inst: shifter 
 	port map(
-		shift_lsl 	=> dec_shift_lsl;
-		shift_lsr 	=> dec_shift_lsr;
-		shift_asr 	=> dec_shift_asr;
-		shift_ror 	=> dec_shift_ror;
-		shift_rrx 	=> dec_shift_rrx;
-		shift_val 	=> dec_shift_val;
+		shift_lsl 	=> dec_shift_lsl,
+		shift_lsr 	=> dec_shift_lsr,
+		shift_asr 	=> dec_shift_asr,
+		shift_ror 	=> dec_shift_ror,
+		shift_rrx 	=> dec_shift_rrx,
+		shift_val 	=> dec_shift_val,
 
-		din       	=> dec_op1;
-		cin       	=> dec_cy;
+		din       	=> shift_op2,
+		cin       	=> dec_cy,
 
-		dout      	=> shift_dout;
-		cout      	=> shift_cout;
+		dout      	=> shift_dout,
+		cout      	=> shift_cout,
 
 		-- global interface
-		vdd		=> vdd;
-		vss    	=> vss;
-	);
+		vdd		=> vdd,
+		vss    	=> vss);
 
 	
 
 	exec2mem : fifo_72b
-	port map (	din(71)	 	 => dec_mem_lw,
+	port map (		din(71)	 => dec_mem_lw,
 					din(70)	 => dec_mem_lb,
 					din(69)	 => dec_mem_sw,
 					din(68)	 => dec_mem_sb,
@@ -219,28 +222,28 @@ signal exe_push : std_logic;
 
 
 -- comportement de l'architecture
+
+	-- shifter op2
+	shift_op2 <=  dec_op2 xor X"11111111" when dec_comp_op2 = '1' else dec_op2;
+
+	-- operandes (l'ajout du 1 de complement se fera avec la retenu)
+	alu_op1   <=  dec_op1 xor X"11111111" when dec_comp_op1 = '1' else dec_op1;
+	alu_op2   <= shift_op2; 
 	
-	op1 <= dec_comp_op1 and shift_dout;
-	op2 <= dec_comp_op2 and dec_op2;
+	mem_adr <=  res when dec_pre_index = '1' else alu_op1;
 
-	if dec_pre_index = 1 then 
-		mem_adr <= exe_res 
-	else mem_adr <= op2 end if;
-
+	-- bypass to decod
 	exe_dest    <= dec_exe_dest;
 	exe_wb 	    <= dec_exe_wb;
 	exe_flag_wb <= dec_flag_wb;	
-	
-	if dec2exe_empty = '0' and full = '0' and empty = '1' then 
-		exe_pop  <= '1';
-		exe_push <= '1';
-	else 
-		exe_pop  <= '0' 
-		exe_push <= '0'	
-	end if;
 
-	if dec_alu_cmd = '00' then 
-		exec_c <= alu_cout;
-	else exe_c <= shift_cout end if;
+	-- quand la fifo qui alimente EXEC n'est pas vide
+	exe_pop  <= '1' when dec2exe_empty = '0' else '0'; -- vider
+	exe_push <= '1' when exe2mem_full  = '0' else '0'; -- remplir celle de EXE vers MEM
+
+	-- operation arithmetique ou logique
+	exe_c <= alu_cout when dec_alu_cmd = "00" else shift_cout;
+
+	exe_res <= res;
 
 end Behavior;
