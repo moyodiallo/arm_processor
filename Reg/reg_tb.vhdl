@@ -27,12 +27,12 @@ component reg
 		
 	-- Read Port 1 32 bits--
 		reg_rd1		: out Std_Logic_Vector(31 downto 0);
-		radr1			: in Std_Logic_Vector(3 downto 0);
+		radr1		: in Std_Logic_Vector(3 downto 0);
 		reg_v1		: out Std_Logic;
 
 	-- Read Port 2 32 bits--
 		reg_rd2		: out Std_Logic_Vector(31 downto 0);
-		radr2			: in Std_Logic_Vector(3 downto 0);
+		radr2		: in Std_Logic_Vector(3 downto 0);
 		reg_v2		: out Std_Logic;
 
 	-- Read Port 3 32 bits--
@@ -65,7 +65,7 @@ component reg
 	
 	-- global interface--
 		ck			: in Std_Logic;
-		reset_n			: in Std_Logic;
+		reset_n		: in Std_Logic;
 		vdd			: in bit;
 		vss			: in bit);
 end component;
@@ -120,13 +120,16 @@ regs: reg port map (wdata1 => wdata1,
 finished <= '0';
 
 
+
 process
 begin
 	for i in 0 to 20 loop
-		ck <= not ck after 5 ms;
-		wait for 5 ms;
+		ck <= '0';
+		wait for 2 ms;
+		ck <= '1';
+		wait for 2 ms;
 	end loop; 	
-wait;
+	wait;
 end process;
 
 process
@@ -135,6 +138,9 @@ process
 	reset_n <= '0';
 wait for 10 ms;
 	reset_n <= '1';
+
+	inc_pc <= '1';
+
 	wdata1 <= "10000000110000011000000110000001";
 	wadr1 <= "1111";
 	wen1 <= '1';

@@ -7,34 +7,34 @@ entity Reg is
 	port(
 	-- Write Port 1 prioritaire--
 		wdata1		: in Std_Logic_Vector(31 downto 0);
-		wadr1			: in Std_Logic_Vector(3 downto 0);
-		wen1			: in Std_Logic;
+		wadr1		: in Std_Logic_Vector(3 downto 0);
+		wen1		: in Std_Logic;
 
 	-- Write Port 2 non prioritaire--
 		wdata2		: in Std_Logic_Vector(31 downto 0);
-		wadr2			: in Std_Logic_Vector(3 downto 0);
-		wen2			: in Std_Logic;
+		wadr2		: in Std_Logic_Vector(3 downto 0);
+		wen2		: in Std_Logic;
 
 	-- Write CSPR Port--
-		wcry			: in Std_Logic;
-		wzero			: in Std_Logic;
-		wneg			: in Std_Logic;
-		wovr			: in Std_Logic;
-		cspr_wb			: in Std_Logic;
+		wcry		: in Std_Logic;
+		wzero		: in Std_Logic;
+		wneg		: in Std_Logic;
+		wovr		: in Std_Logic;
+		cspr_wb		: in Std_Logic;
 		
 	-- Read Port 1 32 bits--
 		reg_rd1		: out Std_Logic_Vector(31 downto 0);
-		radr1			: in Std_Logic_Vector(3 downto 0);
+		radr1		: in Std_Logic_Vector(3 downto 0);
 		reg_v1		: out Std_Logic;
 
 	-- Read Port 2 32 bits--
 		reg_rd2		: out Std_Logic_Vector(31 downto 0);
-		radr2			: in Std_Logic_Vector(3 downto 0);
+		radr2		: in Std_Logic_Vector(3 downto 0);
 		reg_v2		: out Std_Logic;
 
 	-- Read Port 3 32 bits--
 		reg_rd3		: out Std_Logic_Vector(31 downto 0);
-		radr3			: in Std_Logic_Vector(3 downto 0);
+		radr3		: in Std_Logic_Vector(3 downto 0);
 		reg_v3		: out Std_Logic;
 
 	-- read CSPR Port--
@@ -62,71 +62,102 @@ entity Reg is
 	
 	-- global interface--
 		ck			: in Std_Logic;
-		reset_n			: in Std_Logic;
+		reset_n		: in Std_Logic;
 		vdd			: in bit;
 		vss			: in bit);
 end Reg;
 
 architecture Behavior OF Reg is
 type registers_array is array (15 downto 0) of std_logic_vector(31 downto 0);
-type inval_array is array (15 downto 0) of std_logic;
-signal REGS : registers_array;
-signal invals : inval_array;
+type inval_array     is array (15 downto 0) of std_logic;
+signal REGS   : registers_array;
+signal invals : inval_array; -- 1 c'est invalid, 0 est valid
 signal cry,zero,neg,ovr,cznv,vv : std_logic;
 begin 
 process(ck)-- write process (sync)
 begin
-	if(ck'event and ck = '1') then
+	
+	if(rising_edge(ck)) then
+		report "PC ink pcccccccc inkkkkk = " & std_logic'image(inc_pc);
 		--active low reset
 		if(reset_n = '0') then
 			for i in invals'range loop
 				  invals(i) <= '0';
-			end loop; 	
-			cznv <= '0';
-			vv <= '0';
+				  REGS(i)   <= X"00000000";
+			end loop;
+			report "PC initalized = " & std_logic'image(Regs(15)(0));
+			cznv   <= '0';
+			vv     <= '0';
+		else
+
+			-- write 2 	
+			if(wen2 = '1') then
+				REGS(to_integer(unsigned(wadr2)))   <= wdata2;
+				invals(to_integer(unsigned(wadr2))) <= '0';
+			end if;
+
+			-- write 1
+			if(wen1 = '1') then
+				REGS(to_integer(unsigned(wadr1)))   <= wdata1;
+				invals(to_integer(unsigned(wadr2))) <= '0';
+			end if;
+
+			--Flags write back
+			if(cspr_wb = '1') then
+				cry  <= wcry;
+				zero <= wzero;
+				neg  <= wneg;
+				ovr  <= wovr;
+				
+				cznv <= '1';
+				vv   <= '1';
+			end if;
+
+			-- Increment PC
+			if(inc_pc = '1') then
+				report "PC reg1 = " & std_logic'image(Regs(15)(0));
+				REGS(15) <= REGS(15) + 4; 
+				report "increment dkdkfkdkdkdk PC";
+				report "PC reg2 = " & std_logic'image(Regs(15)(0));
+
+			end if;
+
+			--invalidate Regs and flags
+			if inval1 = '1' then 
+				invals(to_integer(unsigned(inval_adr1))) <= '1';
+			end if;
+			if inval2 = '1' then
+				invals(to_integer(unsigned(inval_adr2))) <= '1';
+			end if;
+			
+			if inval_czn = '1' then
+				cznv <= '0';
+			end if;
+			if inval_ovr = '1' then
+				vv <= '0';
+			end if;	
 		end if;
-		-- write 2 	
-		if(wen2 = '1') then
-			REGS(to_integer(unsigned(wadr2))) <= wdata2;
-		end if;
-		-- write 1
-		if(wen1 = '1') then
-			REGS(to_integer(unsigned(wadr1))) <= wdata1;
-		end if;
-		--Flags write back
-		if(cspr_wb = '1') then
-			cry <= wcry;
-			zero <= wzero;
-			neg <= wneg;
-			ovr <= wovr;
-		end if;
-		-- Increment PC
-		if(inc_pc = '1') then
-			REGS(15) <= REGS(15) + 4;
-		end if;
-		--invalidate Regs and flags
-		invals(to_integer(unsigned(inval_adr1))) <= inval1;
-		invals(to_integer(unsigned(inval_adr2))) <= inval2;
-		cznv <= inval_czn;
-		vv <= inval_ovr;
-		
 	end if;
 end process;
+
 -- Read (async)
 reg_rd1 <= REGS(to_integer(unsigned(radr1)));
-reg_v1 <= invals(to_integer(unsigned(radr1)));
 reg_rd2 <= REGS(to_integer(unsigned(radr2)));
-reg_v2 <= invals(to_integer(unsigned(radr2)));
 reg_rd3 <= REGS(to_integer(unsigned(radr3)));
-reg_v3 <= invals(to_integer(unsigned(radr3)));
 
-reg_cry <= cry;
-reg_neg <= neg;
+reg_v2  <= not invals(to_integer(unsigned(radr2)));
+reg_v1  <= not invals(to_integer(unsigned(radr1)));
+reg_v3  <= not invals(to_integer(unsigned(radr3)));
+
+reg_cry  <= cry;
+reg_neg  <= neg;
 reg_zero <= zero;
-reg_ovr <= cry;
-reg_cznv <= cznv;
-reg_vv <= vv;
+reg_ovr  <= ovr;
 
-reg_pc <= REGS(15);
-reg_pcv <= invals(15);
+reg_cznv <= cznv;
+reg_vv   <= vv;
+
+reg_pc  <= REGS(15);
+reg_pcv <= not invals(15);
+
 end Behavior;
