@@ -796,7 +796,7 @@ begin
 	report "if2dec_pop   = " & std_logic'image(if2dec_pop);
 	
 	report "if2dec_empty  = " & std_logic'image(if2dec_empty);
-	report "dec2if_full   = " & std_logic'image(dec2if_empty);
+	report "dec2if_full   = " & std_logic'image(dec2if_full);
 	
 	
 	report "cond     = " & to_hstring(if_ir(31 downto 28));
@@ -938,7 +938,7 @@ begin
 
 		
 		-- pour charger la prochaine instruction (cas d'un branch la prochaine est purger)
-		if dec2if_full = '0' and reg_pcv = '1' and  (branch_t = '0' or condv = '0' or cond = '0') then  
+		if dec2if_full = '0' and reg_pcv = '1' and  not (branch_t = '1' and condv = '1' and cond = '1') then  
 			dec2if_push <= '1';
 		else
 			dec2if_push <= '0';
@@ -963,7 +963,8 @@ begin
 		mtrans_loop_adr <= '0';
 		blink           <= '0';
 
-		dec2if_push     <= '0'; 
+		--dec2if_push     <= '0'; 
+		invalid_branch  <= '0';
 
 		-- purger l'instruction suivant
 		if if2dec_empty = '0' then
@@ -975,9 +976,8 @@ begin
 
 		-- changement d'etat
 		if if2dec_empty = '1' and dec2if_full = '0' then
-			invalid_branch <= '0';
 			next_state 	   <= FETCH;
-			--assert false report "return to run" severity failure;
+			--assert false report "return from branch" severity failure;
 		end if;
 
 	when LINK => 
