@@ -24,26 +24,32 @@ signal op1,op2,res : std_logic_vector(31 downto 0);
 signal cin,cout,z,n,v : std_logic;
 signal cmd : std_logic_vector(1 downto 0);
 signal vdd,vss : bit;
+signal test : std_logic;
 begin
 alu1: Alu
-	port map (op1 => op1,
-		  op2 => op2,
-		  res => res,
-	          cin => cin,
-		  cout => cout,
-		  cmd => cmd,
-		  z => z,
-		  n => n,
-		  v => v,
-		  vdd => vdd,
-		  vss => vss);
+	port map (
+			op1  => op1,
+		  	op2  => op2,
+		  	res  => res,
+	        cin  => cin,
+		  	cout => cout,
+		  	cmd  => cmd,
+		  	z    => z,
+		  	n    => n,
+		  	v    => v,
+		  	vdd  => vdd,
+		  	vss  => vss);
 
 process
 	begin
-	cin <= '0';
-	op1<= "10000000000000000000000000000111";--"00000000000000000000000000000000"  "11111111111111111111111111111111"
-	op2<= "00000000000000000000000000001000";
-	cmd<= "01";	
+	test <= '1';
+	test <= '0';
+
+	cin <= '1';
+	op1 <=  "00000000000000000000000000000000"; 
+	--op1<= "00000000000000000000000000000111";--"00000000000000000000000000000000"  "11111111111111111111111111111111"
+	op2<= "00000000000000000000000000000010" xor "11111111111111111111111111111111";
+	cmd<= "00";	
 wait for 10 ms;
 	
 	assert res="10000000000000000000000000000001" report "Erreur sur res" severity error; 

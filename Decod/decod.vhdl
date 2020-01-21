@@ -282,7 +282,7 @@ signal inval_ovr : Std_Logic;
 -- PC
 signal reg_pc : Std_Logic_Vector(31 downto 0);
 signal reg_pcv : Std_Logic;
-signal inc_pc : Std_Logic;
+signal inc_pc  : Std_Logic;
 
 -- FIFOs
 signal dec2if_full : Std_Logic;
@@ -338,15 +338,18 @@ signal cur_state, next_state : state_type;
 signal debug_state : Std_Logic_Vector(3 downto 0) := X"0";
 signal clock_count: std_logic_vector(31 downto 0);
 
+signal invalid_branch: std_logic;
+
+
 begin
 
 	dec2exec : fifo_127b
-	port map (	din(126) => pre_index,
+	port map (		din(126) 			=> pre_index,
 					din(125 downto 94) 	=> op1,
 					din(93 downto 62)	=> op2,
 					din(61 downto 58)	=> alu_dest,
-					din(57)	 => alu_wb,
-					din(56)	 => flag_wb,
+					din(57)	 			=> alu_wb,
+					din(56)	 			=> flag_wb,
 
 					din(55 downto 24)	=> rdata3,
 					din(23 downto 20)	=> ld_dest,
@@ -355,17 +358,17 @@ begin
 					din(17)	 			=> mem_sw,
 					din(16)	 			=> mem_sb,
 
-					din(15)	 => shift_lsl,
-					din(14)	 => shift_lsr,
-					din(13)	 => shift_asr,
-					din(12)	 => shift_ror,
-					din(11)	 => shift_rrx,
-					din(10 downto 6) => shift_val,
-					din(5)	 		 => cry,
+					din(15)	 			=> shift_lsl,
+					din(14)	 			=> shift_lsr,
+					din(13)	 			=> shift_asr,
+					din(12)	 			=> shift_ror,
+					din(11)	 			=> shift_rrx,
+					din(10 downto 6) 	=> shift_val,
+					din(5)	 		 	=> cry,
 
-					din(4)	 => comp_op1,
-					din(3)	 => comp_op2,
-					din(2)	 => alu_cy,
+					din(4)	 			=> comp_op1,
+					din(3)	 			=> comp_op2,
+					din(2)	 			=> alu_cy,
 
 					din(1 downto 0)	 => alu_cmd,
 
@@ -376,24 +379,24 @@ begin
 					dout(57)	 		 => dec_exe_wb,
 					dout(56)	 		 => dec_flag_wb,
 
-					dout(55 downto 24)	 => dec_mem_data,
-					dout(23 downto 20)	 => dec_mem_dest,
-					dout(19)	 => dec_mem_lw,
-					dout(18)	 => dec_mem_lb,
-					dout(17)	 => dec_mem_sw,
-					dout(16)	 => dec_mem_sb,
+					dout(55 downto 24)	=> dec_mem_data,
+					dout(23 downto 20)	=> dec_mem_dest,
+					dout(19)	 		=> dec_mem_lw,
+					dout(18)	 		=> dec_mem_lb,
+					dout(17)	 		=> dec_mem_sw,
+					dout(16)	 		=> dec_mem_sb,
 
-					dout(15)	 => dec_shift_lsl,
-					dout(14)	 => dec_shift_lsr,
-					dout(13)	 => dec_shift_asr,
-					dout(12)	 => dec_shift_ror,
-					dout(11)	 => dec_shift_rrx,
-					dout(10 downto 6)	 => dec_shift_val,
-					dout(5)	 => dec_cy,
+					dout(15)	 		=> dec_shift_lsl,
+					dout(14)	 		=> dec_shift_lsr,
+					dout(13)	 		=> dec_shift_asr,
+					dout(12)	 		=> dec_shift_ror,
+					dout(11)	 		=> dec_shift_rrx,
+					dout(10 downto 6)	=> dec_shift_val,
+					dout(5)	 			=> dec_cy,
 
-					dout(4)	 => dec_comp_op1,
-					dout(3)	 => dec_comp_op2,
-					dout(2)	 => dec_alu_cy,
+					dout(4)	 			=> dec_comp_op1,
+					dout(3)	 			=> dec_comp_op2,
+					dout(2)	 			=> dec_alu_cy,
 
 					dout(1 downto 0)	=> dec_alu_cmd,
 
@@ -497,24 +500,24 @@ begin
 				else '0';
 
 --validite de la condition	
-	condv <='1' when    if_ir(31 downto 28) = X"E" else
-	reg_cznv 	when 	if_ir(31 downto 28) = X"0" or
-					 	if_ir(31 downto 28) = X"1" or				
-					 	if_ir(31 downto 28) = X"2" or				
-					 	if_ir(31 downto 28) = X"3" or				
-					 	if_ir(31 downto 28) = X"4" or				
-					 	if_ir(31 downto 28) = X"5" or				
-					 	if_ir(31 downto 28) = X"8" or				
-					 	if_ir(31 downto 28) = X"9"	
-				else
-	reg_vv		when 	if_ir(31 downto 28) = X"6" or		     
-						if_ir(31 downto 28) = X"7"
-				else
-	(reg_vv and reg_cznv) 	when   	if_ir(31 downto 28) = X"A" or
-									if_ir(31 downto 28) = X"B" or
-									if_ir(31 downto 28) = X"C" or
-									if_ir(31 downto 28) = X"D"	
-							else '0';
+	condv <='1' 		when    if_ir(31 downto 28) = X"E" else
+			reg_cznv 	when 	if_ir(31 downto 28) = X"0" or
+								if_ir(31 downto 28) = X"1" or				
+								if_ir(31 downto 28) = X"2" or				
+								if_ir(31 downto 28) = X"3" or				
+								if_ir(31 downto 28) = X"4" or				
+								if_ir(31 downto 28) = X"5" or				
+								if_ir(31 downto 28) = X"8" or				
+								if_ir(31 downto 28) = X"9"	
+						else
+			reg_vv		when 	if_ir(31 downto 28) = X"6" or		     
+								if_ir(31 downto 28) = X"7"
+						else
+(reg_vv and reg_cznv) 	when   	if_ir(31 downto 28) = X"A" or
+								if_ir(31 downto 28) = X"B" or
+								if_ir(31 downto 28) = X"C" or
+								if_ir(31 downto 28) = X"D"	
+						else '0';
 
 -- decod instruction type
 	regop_t 	<= '1' when	if_ir(27 downto 26) = "00" and	mult_t = '0' and swap_t = '0' else '0';
@@ -572,18 +575,20 @@ begin
 		     (X"00000" & if_ir(11 downto 0))  when if_ir(25) = '0' and trans_t = '1' else 
 		 not rdata2 						  when (bic_i = '1' or mvn_i = '1') else rdata2;
 
-	 -- ecrire dans PC
-	alu_dest <=	X"E" 				when branch_t = '1' else
+	-- ecrire dans PC et autre
+	alu_dest <=	X"F" 				when branch_t = '1' else
 				if_ir(19 downto 16) when mult_t   = '1' else
 				if_ir(3 downto 0) 	when mtrans_t = '1' 
 									else if_ir(15 downto 12);
 
 	--unitiles pour TST, TEQ, CMP
-	alu_wb	<= if_ir(20)	when regop_t = '1' else '0';
+	alu_wb	<= '1'			when 	(if_ir(24 downto 23) /= "10" and regop_t = '1') or
+							     	b_i = '1'	
+							else '0';
  
 	--pour les TST, TEQ, CMP
 	--S (comme MOVS mis-a-jour du flag)
-	flag_wb	<= if_ir(20)  when regop_t = '1' else '0'; 
+	flag_wb	<= if_ir(20)  when regop_t = '1' or mul_i = '1' else '0'; 
  
 -- reg read
 	-- Rn register
@@ -592,42 +597,52 @@ begin
 	-- Rm register
 	radr2 <= if_ir(3 downto 0);
 
-	-- Rs , pour mla_i , multiplication avec A <- 0 
+	-- Rs , pour mla_i , multiplication avec A <- 0, 
+	-- pour load and store (source/destination)
 	radr3 <= if_ir(11 downto 8);
+	--'0' when str_i = '1' or strb_i = '1'
 
 -- Reg Invalid
-
 	-- Rd register
 	inval_exe_adr <=  if_ir(19 downto 16)	when mult_t = '1' else
-					  X"E" 					when branch_t = '1'
+					  X"F" 					when b_i = '1'
 											else if_ir(15 downto 12);
 	-- invalide Rd & --pas TST, TEQ, CMP
-	inval_exe <=	'0'	when if_ir(24 downto 23) = "10" and regop_t = '1' else
-					'0' when str_i = '1' or strb_i = '1'
-						else '1';
+	inval_exe <='1'		when (if_ir(24 downto 23) /= "10" and regop_t = '1' and if_ir(31 downto 28) = X"E" ) or
+						 	(mult_t = '1'  and if_ir(31 downto 28) = X"E") or
 
-	-- Rn register adress memory ou R14 pour branch and link
+						 	-- pour les inst conditionnel(attente des flags)
+						 	(regop_t = '1' and condv = '1' and if_ir(31 downto 28) /= X"E") or
+						 	(mult_t = '1'  and condv = '1' and if_ir(31 downto 28) /= X"E") else
+		invalid_branch	when (branch_t = '1')
+						else '0'; 
+
+	-- Rn register adress memory(load and store) ou R14 pour branch and link
 	inval_mem_adr <= mtrans_rd 		when mtrans_t = '1' else
 					 X"E"			when bl_i     = '1'
 									else if_ir(19 downto 16);
 
 	-- invalide Rn register adress memory
-	inval_mem	<=	'1'	when mtrans_t = '1' or swap_t = '1' or trans_t = '1' or bl_i = '1' else '0';
+	inval_mem	<=	'1'	when mtrans_t = '1' or swap_t = '1' or trans_t = '1' or bl_i = '1' 
+						else '0';
 
 	-- S = 1 ou les instructions TST, TEQ, CMP
-	inval_czn <= '1' 	when (if_ir(20) = '1' or if_ir(24 downto 23) = "10") and regop_t = '1' else '0';
+	inval_czn <= if_ir(20) 	when regop_t = '1' 
+							else '0';
 	
 	-- meme cas que inval_czn
-	inval_ovr <= '1'	when (if_ir(20) = '1' or if_ir(24 downto 23) = "10") and regop_t = '1' 
-						else '0';
+	inval_ovr <= if_ir(20) 	when regop_t = '1' 
+							else '0';
 
 -- operand validite
 
 	operv <= '1' when 	(rvalid1 = '1' and rvalid2 = '1' and rvalid3 = '1' and mult_t = '1') or
-				 		(rvalid1 = '1' and rvalid2 = '1' and regop_t = '1') or
-				 		(rvalid1 = '1' and rvalid2 = '1' and swap_t  = '1') or
-				 		(rvalid1 = '1' and rvalid3 = '1' and trans_t = '1') or
-				 		(rvalid1 = '1' and rvalid3 = '1' and mtrans_t = '1')
+						(rvalid1 = '1' and rvalid2 = '1' and regop_t = '1' and if_ir(25) = '0') or
+						(rvalid1 = '1'                   and regop_t = '1' and if_ir(25) = '1') or
+				 		(rvalid1 = '1' and rvalid2 = '1' and swap_t  = '1')  or
+				 		(rvalid1 = '1' and rvalid3 = '1' and trans_t = '1')  or
+						(rvalid1 = '1' and rvalid3 = '1' and mtrans_t = '1') or
+						(reg_pcv = '1' and branch_t = '1')
 				 else '0';
 
 -- Decode to mem interface 
@@ -642,12 +657,12 @@ begin
 -- Shifter command
 
 	shift_lsl <= '1' 	when (if_ir(25) = '0' and regop_t = '1' and if_ir(6 downto 5) = "00") or
-							 (if_ir(25) = '1' and trans_t = '1' and if_ir(6 downto 5) = "00")
+							 (if_ir(25) = '1' and trans_t = '1' and if_ir(6 downto 5) = "00") or
+							 branch_t = '1'
 						else '0';
 
 	shift_lsr <= '1' 	when (if_ir(25) = '0' and regop_t = '1' and if_ir(6 downto 5) = "01") or
-							 (if_ir(25) = '1' and trans_t = '1' and if_ir(6 downto 5) = "01") or
-							 (branch_t  = '1')
+							 (if_ir(25) = '1' and trans_t = '1' and if_ir(6 downto 5) = "01")
 						else '0';
 
 	shift_asr <= '1' 	when (if_ir(25) = '0' and regop_t = '1' and if_ir(6 downto 5) = "10") or
@@ -659,7 +674,7 @@ begin
 							 (if_ir(25) = '1' and regop_t = '1')
 						else '0';
 
-	shift_rrx <= '1' 	when shift_lsl = '1' else '0';
+	shift_rrx <= '1' 	when shift_lsl = '0' else '0';
 
 	shift_val <=	"00010"				when  branch_t = '1' else
 					if_ir(11 downto 7)	when (regop_t  = '1' and if_ir(4) = '0' and if_ir(25) = '0') or
@@ -674,7 +689,8 @@ begin
 	comp_op1 <=	'1' when rsb_i = '1' or rsc_i = '1' else '0';
 	comp_op2 <=	'1' when sub_i = '1' or cmp_i = '1' or sbc_i = '1' else '0';
 
-	alu_cy <=	exe_c when adc_i = '1' or sbc_i = '0' or rsc_i = '1' else '0';
+	alu_cy <=	exe_c 	when adc_i = '1' or sbc_i = '1' or rsc_i = '1' else 
+					'1' when sub_i = '1' or rsb_i = '1' or cmp_i = '1' else '0';
 
 -- Alu command
 	alu_cmd <=	"01" 	when and_i = '1' or tst_i = '1' or bic_i = '1' else
@@ -735,13 +751,13 @@ begin
 process (ck)
 begin
 
-if (rising_edge(ck)) then
-	if (reset_n = '0') then
-		cur_state <= FETCH;
-	else
-		cur_state <= next_state;
+	if (rising_edge(ck)) then
+		if (reset_n = '0') then
+			cur_state <= FETCH;
+		else
+			cur_state <= next_state;
+		end if;
 	end if;
-end if;
 
 end process;
 
@@ -755,148 +771,228 @@ if (rising_edge(ck)) then
 		clock_count <= clock_count + 1;
 	end if;
 end if;
-
 end process;
 
-
+-- il faut pas utiiser inc_pc ou dec_pop dans la gestion des etats, source d'erreurs
 inc_pc  <= dec2if_push;
 dec_pop <= if2dec_pop;
 
-process(ck)
-	begin
-		if dec2if_push = '1' then
-			report "dec inc";
-		end if;
-		if inc_pc = '1' then
-			report "inc pc";
-		end if;
-end process;
-
-
-
 --state machine process.
-process (cur_state, dec2if_full, cond, condv, operv, dec2exe_full, if2dec_empty, reg_pcv, bl_i,
+process (invalid_branch,ck,cur_state, dec2if_full, cond, condv, operv, dec2exe_full, if2dec_empty, reg_pcv, bl_i,
 			branch_t, and_i, eor_i, sub_i, rsb_i, add_i, adc_i, sbc_i, rsc_i, orr_i, mov_i, bic_i,
 			mvn_i, ldr_i, ldrb_i, ldm_i, stm_i, if_ir, mtrans_rd, mtrans_mask_shift)
 begin
 
+	if debug_state = X"1" then 
+
+	report " ";
 	report "CK = " & integer'image(to_integer(unsigned(clock_count)));
+	report "PC = " & to_hstring(reg_pc);
+	--report "dec_pc = " & integer'image(to_integer(unsigned(if_ir)));
+
+	report "dec2if_push  = " & std_logic'image(dec2if_push);
+	report "dec2exe_push = " & std_logic'image(dec2exe_push);
+	report "if2dec_empty = " & std_logic'image(if2dec_empty);
+	report "if2dec_pop   = " & std_logic'image(if2dec_pop);
+	
+	report "if2dec_empty  = " & std_logic'image(if2dec_empty);
+	report "dec2if_full   = " & std_logic'image(dec2if_empty);
+	
+	
+	report "cond     = " & to_hstring(if_ir(31 downto 28));
+	report "cond     = " & std_logic'image(cond);
+	report "condv    = " & std_logic'image(condv);
+	report "operv    = " & std_logic'image(operv);
+	report "branch_t = " & std_logic'image(branch_t);
+	report "reg_pcv  = " & std_logic'image(reg_pcv);
+	
+	report "inval_exe_adr = " & integer'image(to_integer(unsigned(inval_exe_adr)));
+	report "inval_exe     = " & std_logic'image(inval_exe);
+
+	report "inval_mem_adr = " & integer'image(to_integer(unsigned(inval_mem_adr)));
+	report "inval_mem     = " & std_logic'image(inval_mem);
+	
+	report "radr1 = " & integer'image(to_integer(unsigned(radr1)));
+	report "radr2 = " & integer'image(to_integer(unsigned(radr2)));
+	report "radr3 = " & integer'image(to_integer(unsigned(radr3)));
+
+	--report "rvalid1 = " & std_logic'image(rvalid1);
+	--report "rvalid2 = " & std_logic'image(rvalid2);
+	--report "rvalid3 = " & std_logic'image(rvalid3);
+	
+	report "exe_c = " & std_logic'image(exe_c);
+	report "exe_z = " & std_logic'image(exe_z);
+	report "exe_v = " & std_logic'image(exe_v);
+	report "exe_n = " & std_logic'image(exe_n);
+	
+	report "exe_res     = 0x" & to_hstring(exe_res);
+	report "exe_dest    = " & integer'image(to_integer(unsigned(exe_dest)));
+	report "exe_wb      = " & std_logic'image(exe_wb);
+	report "exe_flag_wb = " & std_logic'image(exe_flag_wb);
+	report "mem_wb      = " & std_logic'image(mem_wb);
+	
+	report "reg_vv    = " & std_logic'image(reg_vv);
+	report "reg_cznv  = " & std_logic'image(reg_cznv);
+	report "inval_ovr = " & std_logic'image(inval_ovr);
+	report "inval_czn = " & std_logic'image(inval_czn);
+	report "regop_t   = " & std_logic'image(regop_t);
+
+
+	report "op1      = 0x" & to_hstring(op1);
+	report "op2      = 0x" & to_hstring(op2);
+	report "alu_dest = " & integer'image(to_integer(unsigned(alu_dest)));
+	report "flag_wb  = " & std_logic'image(flag_wb);
+	
+	report "comp_op1 = " & std_logic'image(comp_op1);
+	report "comp_op2 = " & std_logic'image(comp_op2);
+
+	report "alu_cmd = " & integer'image(to_integer(unsigned(alu_cmd)));
+	report "alu_cy  = " & std_logic'image(alu_cy);
+
+	report "shift_lsl = " & std_logic'image(shift_lsl);
+	report "shift_lsr = " & std_logic'image(shift_lsr);
+	report "shift_ror = " & std_logic'image(shift_ror);
+	report "shift_asr = " & std_logic'image(shift_asr);
+	report "shift_rrx = " & std_logic'image(shift_rrx);
+	report "shift_val = " & integer'image(to_integer(unsigned(shift_val)));
+
+	case cur_state is
+
+		when FETCH =>
+			report "--> state = FETCH";
+		when RUN =>
+			report "--> state = RUN";
+		when BRANCH =>
+			report "--> state = BRANCH";
+		when LINK =>
+			report "--> state = LINK";
+		when MTRANS => 
+			report "--> state = MTRANS";
+		
+	end case;
+
+	end if;
+
+
 
 	case cur_state is
 
 	when FETCH =>
-		report "--> FETCH";
-		report "CK = " & integer'image(to_integer(unsigned(clock_count)));
-		report "PC = " & integer'image(to_integer(unsigned(reg_pc)));
+		--report "--> FETCH";
 		
-		
-		debug_state  <= X"1";
+		debug_state  	<= X"1";
 
-		if2dec_pop   <= '0';
-		dec2exe_push <= '0';
+		if2dec_pop   	<= '0';
+		dec2exe_push 	<= '0';
 		
 		mtrans_shift    <= '0';
 		mtrans_loop_adr <= '0';
 
-		report "dec2if = " & std_logic'image(dec2if_full);
-
-		-- ecrire la premiere valeur du PC
-		if dec2if_full = '0' then  
+		-- ecrire la premiere valeur PC vers IFETCH
+		if dec2if_full = '0' and reg_pcv = '1' then
 			dec2if_push <= '1';
-			report "decccc incccc";
-		else 
-			dec2if_push <= '0';
-			report "decccc incccc 00000";
-		end if;
-
-		report " ";
-
-		-- on a une premiere valeur ou pas
-		if dec2if_full = '1' then
 			next_state  <= RUN;
-		else 
-			next_state <= FETCH;
+		else
+			dec2if_push <= '0';
 		end if;
-
-
 
 	when RUN =>
-		report "--> RUN";
-		report "CK = " & integer'image(to_integer(unsigned(clock_count)));
-		report "PC = " & integer'image(to_integer(unsigned(reg_pc)));
-		report " ";
+		--report "--> RUN";
 
-		assert false report "arret" severity failure;
-		
 		mtrans_shift    <= '0';
 		mtrans_loop_adr <= '0';
-		
-		-- pour charger la prochaine instruction (cas d'un branch la prochaine est purger)
-		if dec2if_full = '0' and  not (branch_t = '1' and condv = '1') then  
-			dec2if_push <= '1';
-		else 
-			dec2if_push <= '0';
-		end if;
-		
-		-- branchment : PC+8
-		if branch_t = '1' and condv = '1' then 
-			inc_pc <= '1';
-			report "--> branch = 1";
-		end if;
+		blink           <= '0';
 
-		-- envoi vers exec pour execution
-		if condv = '0' and if2dec_empty = '0' then
-			dec2exe_push <= '0';
-			if2dec_pop   <= '1';
-		elsif   operv = '1' 
+		-- on change d'etat que si une instruction est a executer
+		if      operv = '1' 
 			and condv = '1'
 			and dec2exe_full = '0' 
 			and reg_pcv = '1' 
 			and if2dec_empty = '0'
-			and branch_t = '0'
 			then
-			dec2exe_push <= '1';
-			if2dec_pop 	 <= '1';
-		end if;
 
-		-- on change de d'etat selon la regle
-		if b_i = '1' and condv = '1' then
-			next_state  <= BRANCH;
-		elsif mtrans_t = '1' and condv = '1' then
-			next_state <= MTRANS;
-		elsif bl_i = '1' then
-			next_state <= LINK;
+				-- instruction a ne pas executer
+				if cond = '0' and if2dec_empty = '0' then
+					dec2exe_push <= '0';
+					if2dec_pop   <= '1';
+				else 
+					-- instruction a executer
+					dec2exe_push <= '1';
+					if2dec_pop 	 <= '1';
+
+					-- on change d'etat selon la regle et quelque condition
+					if b_i = '1'  then
+						next_state  <= BRANCH;
+					elsif mtrans_t = '1' then
+						next_state <= MTRANS;
+					elsif bl_i = '1' then
+						next_state <= LINK;
+					end if;
+
+				end if;
 		else
-			next_state <= RUN;
+			dec2exe_push <= '0';
+			if2dec_pop 	 <= '0';
+			next_state   <= RUN;
 		end if;
-		
-	when BRANCH =>
-		report "--> BRANCH";
-		report "CK = " & integer'image(to_integer(unsigned(clock_count)));
-		report "PC = " & integer'image(to_integer(unsigned(reg_pc)));
-		report " ";
 
-		if reg_pcv = '1' and dec2if_full = '0' then 
+		
+		-- pour charger la prochaine instruction (cas d'un branch la prochaine est purger)
+		if dec2if_full = '0' and reg_pcv = '1' and  (branch_t = '0' or condv = '0' or cond = '0') then  
 			dec2if_push <= '1';
-		else 
+		else
 			dec2if_push <= '0';
 		end if;
 
-		if if2dec_empty = '1' then
-			next_state <= BRANCH;
-		elsif if2dec_empty = '0' then
-			next_state <= RUN;
+		-- pour l'invalidation du registre 15, pour le branchement
+		if 	(branch_t  = '1'  and if_ir(31 downto 28) = X"E") or 
+			(branch_t  = '1'  and condv = '1' and if_ir(31 downto 28) /= X"E") 
+			then
+			invalid_branch <= '1';
 		else 
-			next_state <= BRANCH;
+			invalid_branch <= '0';
+		end if;
+		
+		
+	when BRANCH =>
+		--report "--> BRANCH";
+
+		dec2exe_push    <= '0';
+
+		mtrans_shift    <= '0';
+		mtrans_loop_adr <= '0';
+		blink           <= '0';
+
+		dec2if_push     <= '0'; 
+
+		-- purger l'instruction suivant
+		if if2dec_empty = '0' then
+			if2dec_pop <= '1';
+			report "poper "& std_logic'image(reg_pcv);
+		else 
+			if2dec_pop <= '0';
+		end if;
+
+		-- changement d'etat
+		if if2dec_empty = '1' and dec2if_full = '0' then
+			invalid_branch <= '0';
+			next_state 	   <= FETCH;
+			--assert false report "return to run" severity failure;
 		end if;
 
 	when LINK => 
-		report "--> LINK";
+		--report "--> LINK";
+
+		dec2exe_push <= '0';
+
 		mtrans_shift    <= '0';
 		mtrans_loop_adr <= '0';
 
+		assert false report "arret branch" severity failure;
+
 	when MTRANS => 
-		report "--> MTRANS";
+		--report "--> MTRANS";
+
 		mtrans_shift    <= '1';
 		mtrans_loop_adr <= '1';
 

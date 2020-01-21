@@ -41,8 +41,8 @@ entity Reg is
 		reg_cry		: out Std_Logic;
 		reg_zero	: out Std_Logic;
 		reg_neg		: out Std_Logic;
-		reg_cznv	: out Std_Logic;
 		reg_ovr		: out Std_Logic;
+		reg_cznv	: out Std_Logic;
 		reg_vv		: out Std_Logic;
 		
 	-- Invalidate Port --
@@ -78,7 +78,7 @@ process(ck)-- write process (sync)
 begin
 	
 	if(rising_edge(ck)) then
-		report "PC ink pcccccccc inkkkkk = " & std_logic'image(inc_pc);
+		--report "PC ink reg= " & std_logic'image(inc_pc);
 		--active low reset
 		if(reset_n = '0') then
 			for i in invals'range loop
@@ -86,56 +86,75 @@ begin
 				  REGS(i)   <= X"00000000";
 			end loop;
 			report "PC initalized = " & std_logic'image(Regs(15)(0));
-			cznv   <= '0';
-			vv     <= '0';
+			cznv   <= '1';
+			vv     <= '1';
 		else
 
-			-- write 2 	
-			if(wen2 = '1') then
-				REGS(to_integer(unsigned(wadr2)))   <= wdata2;
-				invals(to_integer(unsigned(wadr2))) <= '0';
-			end if;
+			--report "wen1 "& std_logic'image(wen1);
+			--report "invalw1" & std_logic'image(invals(to_integer(unsigned(wadr1))));
+			--report "invalid1 " & integer'image(to_integer(unsigned(inval_adr1)));
 
-			-- write 1
-			if(wen1 = '1') then
+			if( wen1 = '1' and wen2 = '1' and wadr1 = wadr2 
+				and invals(to_integer(unsigned(wadr1))) = '1'
+				and invals(to_integer(unsigned(wadr2))) = '1') 
+			then
+				report "writing port 1 ("& to_hstring(wadr1) &")= " & to_hstring(wdata1);
 				REGS(to_integer(unsigned(wadr1)))   <= wdata1;
-				invals(to_integer(unsigned(wadr2))) <= '0';
+				invals(to_integer(unsigned(wadr1))) <= '0';
+			else
+				-- write 2 	
+				if (wen2 = '1' and invals(to_integer(unsigned(wadr2))) = '1') then
+					report "writing port 2 ("& to_hstring(wadr2) &")= " & to_hstring(wdata2);
+					REGS(to_integer(unsigned(wadr2)))   <= wdata2;
+					invals(to_integer(unsigned(wadr2))) <= '0';
+				end if;
+
+				-- write 1
+				if(wen1 = '1' and invals(to_integer(unsigned(wadr1))) = '1') then
+					report "writing port 1 ("& to_hstring(wadr1) &")= " & to_hstring(wdata1);
+					REGS(to_integer(unsigned(wadr1)))   <= wdata1;
+					invals(to_integer(unsigned(wadr1))) <= '0';
+				end if;
+
 			end if;
 
 			--Flags write back
-			if(cspr_wb = '1') then
+			if (cspr_wb = '1' and cznv = '0') then
 				cry  <= wcry;
 				zero <= wzero;
 				neg  <= wneg;
-				ovr  <= wovr;
-				
 				cznv <= '1';
+			end if;
+			if (cspr_wb = '1' and vv = '0') then
+				ovr  <= wovr;
 				vv   <= '1';
 			end if;
 
 			-- Increment PC
-			if(inc_pc = '1') then
-				report "PC reg1 = " & std_logic'image(Regs(15)(0));
-				REGS(15) <= REGS(15) + 4; 
-				report "increment dkdkfkdkdkdk PC";
-				report "PC reg2 = " & std_logic'image(Regs(15)(0));
-
+			if inc_pc = '1' and invals(15) = '0' then
+				-- report "PC reg_incr = " & std_logic'image(Regs(15)(0));
+				REGS(15) <= REGS(15) + 4;
 			end if;
 
-			--invalidate Regs and flags
-			if inval1 = '1' then 
+			--invalidate Regs and flags (on invalid si c'est valide)
+			if 	inval1 = '1' and invals(to_integer(unsigned(inval_adr1))) = '0'then 
+				report "invalid1 " & integer'image(to_integer(unsigned(inval_adr1)));	
 				invals(to_integer(unsigned(inval_adr1))) <= '1';
 			end if;
-			if inval2 = '1' then
+
+			if 	inval2 = '1' and invals(to_integer(unsigned(inval_adr2))) = '0' then
+				--report "invalid2 " & integer'image(to_integer(unsigned(inval_adr2)));
 				invals(to_integer(unsigned(inval_adr2))) <= '1';
 			end if;
 			
-			if inval_czn = '1' then
+			if inval_czn = '1' and cznv = '1' then
 				cznv <= '0';
 			end if;
-			if inval_ovr = '1' then
+
+			if inval_ovr = '1' and vv = '1' then
 				vv <= '0';
-			end if;	
+			end if;
+
 		end if;
 	end if;
 end process;
