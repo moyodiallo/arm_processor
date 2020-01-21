@@ -4,10 +4,11 @@
 	.text
 	.globl	_start 
 _start:               
-	/* 0x00 Reset Interrupt vector address */
+	mov r4, #8
+	mov r7, #12
+	add r5, r4, lsl #2
+	cmp r7, r5
 	b	_good
-	
-	/* 0x04 Undefined Instruction Interrupt vector address */
 	b	_bad
 
 _bad :
