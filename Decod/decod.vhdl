@@ -610,18 +610,20 @@ begin
 					  X"F" 					when b_i = '1'
 											else if_ir(15 downto 12);
 	-- invalide Rd & --pas TST, TEQ, CMP
-	inval_exe <='1'	when cond = '1' and ((if_ir(24 downto 23) /= "10" 
-									and regop_t = '1' and if_ir(31 downto 28) = X"E") or
-							 (mult_t = '1'  and if_ir(31 downto 28) = X"E") or
-							 (branch_t  = '1'  and if_ir(31 downto 28) = X"E") or
+	inval_exe <='1'	when cond = '1' and condv = '1' and  reg_pcv = '1' and operv = '1' and cur_state = RUN and
+							(
+								(if_ir(24 downto 23) /= "10" and regop_t = '1' and if_ir(31 downto 28) = X"E") or
+								(mult_t = '1'  and if_ir(31 downto 28) = X"E") or
+								(branch_t  = '1'  and if_ir(31 downto 28) = X"E") or
 
-						 	-- pour les inst conditionnel(attente des flags)
-						 	(regop_t = '1' 	 and condv = '1' and if_ir(31 downto 28) /= X"E") or
-							(mult_t = '1'  	 and condv = '1' and if_ir(31 downto 28) /= X"E") or 
-							(branch_t  = '1' and condv = '1' and if_ir(31 downto 28) /= X"E"))
+						 		-- pour les inst conditionnel(attente des flags)
+						 		(regop_t = '1' 	 and if_ir(31 downto 28) /= X"E") or
+								(mult_t = '1'  	 and if_ir(31 downto 28) /= X"E") or 
+								(branch_t  = '1' and if_ir(31 downto 28) /= X"E")
+							)
 						else '0'; 
 
-	-- Rn register adress memory(load and store) ou R14 pour branch and link
+	-- Rd register adress memory(load and store) ou R14 pour branch and link
 	inval_mem_adr <= mtrans_rd 		when mtrans_t = '1' else
 					 X"E"			when bl_i     = '1'
 									else if_ir(19 downto 16);
@@ -910,6 +912,7 @@ begin
 			next_state <= RUN;
 		end if;
 
+
 	when RUN =>
 		--report "--> RUN";
 
@@ -936,7 +939,7 @@ begin
 
 					-- on change d'etat selon la regle et quelque condition
 					if b_i = '1'  then
-						next_state  <= BRANCH;
+						next_state <= BRANCH;
 					elsif mtrans_t = '1' then
 						next_state <= MTRANS;
 					elsif bl_i = '1' then
