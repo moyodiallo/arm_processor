@@ -338,8 +338,9 @@ signal cur_state, next_state : state_type;
 signal debug_state : Std_Logic_Vector(3 downto 0) := X"0";
 signal clock_count: std_logic_vector(31 downto 0);
 
-signal invalid_branch: std_logic;
-
+signal link_op_2 	 : std_logic_vector(31 downto 0);
+signal link_dest 	 : std_logic_vector(3 downto 0);
+signal link_shift_va : std_logic_vector(4 downto 0);
 
 begin
 
@@ -570,7 +571,8 @@ begin
 	op1 <=	reg_pc		  	when branch_t = '1' else 
 			X"00000000"     when (mvn_i = '1' or mov_i ='1') else rdata1;
 
-	op2	<=	offset32	                      when branch_t  = '1'  else 
+	op2	<=	 offset32	                      when b_i  = '1'  else
+			 link_op_2 					  when bl_i = '1' else
 			 (X"000000" & if_ir(7 downto 0))  when if_ir(25) = '1' and regop_t = '1' and if_ir(7) = '0' else
 			 (X"111111" & if_ir(7 downto 0))  when if_ir(25) = '1' and regop_t = '1' and if_ir(7) = '1' else
 		 not (X"000000" & if_ir(7 downto 0))  when if_ir(25) = '1' and (bic_i  = '1' or mvn_i ='1') and if_ir(7) = '0' else
@@ -580,14 +582,15 @@ begin
 		 not rdata2 						  when (bic_i = '1' or mvn_i = '1') else rdata2;
 
 	-- ecrire dans PC et autre
-	alu_dest <=	X"F" 				when branch_t = '1' else
+	alu_dest <=	X"F" 				when b_i = '1' else
 				if_ir(19 downto 16) when mult_t   = '1' else
-				if_ir(3 downto 0) 	when mtrans_t = '1' 
+				if_ir(3 downto 0) 	when mtrans_t = '1' else 
+				link_dest 		 	when bl_i = '1'
 									else if_ir(15 downto 12);
 
 	--unitiles pour TST, TEQ, CMP
 	alu_wb	<= '1'			when 	(if_ir(24 downto 23) /= "10" and regop_t = '1') or 
-									b_i = '1' or (trans_t = '1' and if_ir(21) = '1')	
+									b_i = '1' or bl_i = '1' or (trans_t = '1' and if_ir(21) = '1') 	
 							else '0';
  
 	--pour les TST, TEQ, CMP
@@ -611,27 +614,34 @@ begin
 -- Reg Invalid
 	-- Rd register / Rn for load and store
 	inval_exe_adr <=  if_ir(19 downto 16)	when mult_t = '1' or trans_t = '1' else
-					  X"F" 					when b_i = '1'
+					link_dest				when bl_i = '1' else
+					  X"F" 					when b_i  = '1'
 											else if_ir(15 downto 12);
 	-- invalide Rd & --pas TST, TEQ, CMP
-	inval_exe <='1'	when cond = '1' and condv = '1' and  reg_pcv = '1' and operv = '1' and cur_state = RUN and
+	inval_exe <='1'	when cond = '1' and condv = '1' 
+						 and reg_pcv = '1' 
+						 and operv = '1' 
+						 and (cur_state = RUN or bl_i = '1')
+						 and
 							(
 								(regop_t = '1' and if_ir(24 downto 23) /= "10") or
-								 mult_t = '1'  or branch_t  = '1' or 
+								 mult_t = '1'  or branch_t = '1' or 
 								(trans_t = '1' and if_ir(21) = '1')
 							)
-						else '0'; 
+					else '0';
 
 	-- Rd register adress memory(load and store) ou R14 pour branch and link
 	inval_mem_adr <= mtrans_rd 		when mtrans_t = '1' else
-					 X"E"			when bl_i     = '1' else
 						ld_dest		when trans_t  = '1'
 									else if_ir(19 downto 16);
 
 	-- invalide Rd register adress memory
-	inval_mem	<=	'1'	when cond = '1' and condv = '1' and  reg_pcv = '1' and operv = '1' and cur_state = RUN and
-				 			(
-								mtrans_t = '1' or swap_t = '1' or ldr_i = '1' or ldrb_i = '1' or bl_i = '1' 
+	inval_mem	<=	'1'	when cond = '1' and condv = '1' 
+							 and  reg_pcv = '1' and operv = '1' 
+							 and cur_state = RUN 
+							 and
+				 			 (
+								mtrans_t = '1' or swap_t = '1' or ldr_i = '1' or ldrb_i = '1' 
 							 )
 						else '0';
 
@@ -685,7 +695,8 @@ begin
 
 	shift_rrx <= '1' 	when shift_lsl = '0' else '0';
 
-	shift_val <=	"00010"				when  branch_t = '1' else
+	shift_val <=	"00010"				when b_i = '1' else
+					link_shift_va       when bl_i = '1' else
 					if_ir(11 downto 7)	when (regop_t  = '1' and if_ir(4) = '0' and if_ir(25) = '0') or
 											 (trans_t  = '1' and if_ir(4) = '0' and if_ir(25) = '1')
 										else
@@ -696,10 +707,12 @@ begin
 
 -- Alu operand selection
 	comp_op1 <=	'1' when rsb_i = '1' or rsc_i = '1' else '0';
-	comp_op2 <=	'1' when sub_i = '1' or cmp_i = '1' or sbc_i = '1' else '0';
+	comp_op2 <=	'1' when sub_i = '1' or cmp_i = '1' or sbc_i = '1'
+					else '0';
 
 	alu_cy <=	exe_c 	when adc_i = '1' or sbc_i = '1' or rsc_i = '1' else 
-					'1' when sub_i = '1' or rsb_i = '1' or cmp_i = '1' else '0';
+					'1' when sub_i = '1' or rsb_i = '1' or cmp_i = '1'
+						else '0';
 
 -- Alu command
 	alu_cmd <=	"01" 	when and_i = '1' or tst_i = '1' or bic_i = '1' else
@@ -787,7 +800,7 @@ inc_pc  <= dec2if_push;
 dec_pop <= if2dec_pop;
 
 --state machine process.
-process (invalid_branch,ck,cur_state, dec2if_full, cond, condv, operv, dec2exe_full, if2dec_empty, reg_pcv, bl_i,
+process (ck,cur_state, dec2if_full, cond, condv, operv, dec2exe_full, if2dec_empty, reg_pcv, bl_i,
 			branch_t, and_i, eor_i, sub_i, rsb_i, add_i, adc_i, sbc_i, rsc_i, orr_i, mov_i, bic_i,
 			mvn_i, ldr_i, ldrb_i, ldm_i, stm_i, if_ir, mtrans_rd, mtrans_mask_shift)
 begin
@@ -817,8 +830,6 @@ begin
 	report "b_i = " & std_logic'image(b_i);
 	report "bl_i = " & std_logic'image(bl_i);
 	report "reg_pcv  = " & std_logic'image(reg_pcv);
-	
-	report "invalid_branch  = " & std_logic'image(invalid_branch);
 	
 	report "inval_exe_adr = " & integer'image(to_integer(unsigned(inval_exe_adr)));
 	report "inval_exe     = " & std_logic'image(inval_exe);
@@ -945,7 +956,12 @@ begin
 				else 
 					-- instruction a executer
 					dec2exe_push <= '1';
-					if2dec_pop 	 <= '1';
+
+					if bl_i = '0' then 
+						if2dec_pop 	<= '1';
+					else 
+						if2dec_pop  <= '0';
+					end if;
 
 					-- on change d'etat selon la regle et quelque condition
 					if b_i = '1'  then
@@ -971,6 +987,12 @@ begin
 			dec2if_push <= '1';
 		else
 			dec2if_push <= '0';
+		end if;
+
+		if bl_i = '1' then
+			link_op_2 	  <= X"FFFFFFFC"; 
+			link_dest 	  <= X"E";
+			link_shift_va <= "00000";
 		end if;
 		
 	when BRANCH =>
@@ -998,13 +1020,21 @@ begin
 	when LINK => 
 		--report "--> LINK";
 
-		dec2exe_push <= '0';
+		dec2exe_push <= '1';
+		if2dec_pop   <= '1';
 
 		mtrans_shift    <= '0';
 		mtrans_loop_adr <= '0';
 
-		assert false report "arret branch" severity failure;
+		link_op_2     <= offset32;
+		link_dest 	  <= X"F";
+		link_shift_va <= "00010";
 
+		next_state    <= BRANCH;
+
+		if clock_count = X"0000000A" then
+		assert false report "arret link" severity failure;
+		end if;
 	when MTRANS => 
 		--report "--> MTRANS";
 
