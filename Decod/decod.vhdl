@@ -571,9 +571,12 @@ begin
 			X"00000000"     when (mvn_i = '1' or mov_i ='1') else rdata1;
 
 	op2	<=	offset32	                      when branch_t  = '1'  else 
-		     (X"000000" & if_ir(7 downto 0))  when if_ir(25) = '1' and regop_t = '1' else
-		 not (X"000000" & if_ir(7 downto 0))  when if_ir(25) = '1' and (bic_i  = '1' or mvn_i ='1') else
-		     (X"00000" & if_ir(11 downto 0))  when if_ir(25) = '0' and trans_t = '1' else 
+			 (X"000000" & if_ir(7 downto 0))  when if_ir(25) = '1' and regop_t = '1' and if_ir(7) = '0' else
+			 (X"111111" & if_ir(7 downto 0))  when if_ir(25) = '1' and regop_t = '1' and if_ir(7) = '1' else
+		 not (X"000000" & if_ir(7 downto 0))  when if_ir(25) = '1' and (bic_i  = '1' or mvn_i ='1') and if_ir(7) = '0' else
+		 not (X"111111" & if_ir(7 downto 0))  when if_ir(25) = '1' and (bic_i  = '1' or mvn_i ='1') and if_ir(7) = '1' else
+			 (X"00000" & if_ir(11 downto 0))  when if_ir(25) = '0' and trans_t = '1' and if_ir(11) = '0' else 
+			 (X"11111" & if_ir(11 downto 0))  when if_ir(25) = '0' and trans_t = '1' and if_ir(11) = '1' else
 		 not rdata2 						  when (bic_i = '1' or mvn_i = '1') else rdata2;
 
 	-- ecrire dans PC et autre
@@ -583,8 +586,8 @@ begin
 									else if_ir(15 downto 12);
 
 	--unitiles pour TST, TEQ, CMP
-	alu_wb	<= '1'			when 	(if_ir(24 downto 23) /= "10" and regop_t = '1') or
-							     	b_i = '1'	
+	alu_wb	<= '1'			when 	(if_ir(24 downto 23) /= "10" and regop_t = '1') or 
+									b_i = '1' or (trans_t = '1' and if_ir(21) = '1')	
 							else '0';
  
 	--pour les TST, TEQ, CMP
@@ -600,36 +603,36 @@ begin
 
 	-- Rs , pour mla_i , multiplication avec A <- 0, 
 	-- pour load and store (source/destination)
-	radr3 <= if_ir(11 downto 8);
+	radr3 <= if_ir(15 downto 12) 	when trans_t = '1' 
+									else if_ir(11 downto 8);
 	--'0' when str_i = '1' or strb_i = '1'
 
 
 -- Reg Invalid
-	-- Rd register
-	inval_exe_adr <=  if_ir(19 downto 16)	when mult_t = '1' else
+	-- Rd register / Rn for load and store
+	inval_exe_adr <=  if_ir(19 downto 16)	when mult_t = '1' or trans_t = '1' else
 					  X"F" 					when b_i = '1'
 											else if_ir(15 downto 12);
 	-- invalide Rd & --pas TST, TEQ, CMP
 	inval_exe <='1'	when cond = '1' and condv = '1' and  reg_pcv = '1' and operv = '1' and cur_state = RUN and
 							(
-								(if_ir(24 downto 23) /= "10" and regop_t = '1' and if_ir(31 downto 28) = X"E") or
-								(mult_t = '1'  and if_ir(31 downto 28) = X"E") or
-								(branch_t  = '1'  and if_ir(31 downto 28) = X"E") or
-
-						 		-- pour les inst conditionnel(attente des flags)
-						 		(regop_t = '1' 	 and if_ir(31 downto 28) /= X"E") or
-								(mult_t = '1'  	 and if_ir(31 downto 28) /= X"E") or 
-								(branch_t  = '1' and if_ir(31 downto 28) /= X"E")
+								(regop_t = '1' and if_ir(24 downto 23) /= "10") or
+								 mult_t = '1'  or branch_t  = '1' or 
+								(trans_t = '1' and if_ir(21) = '1')
 							)
 						else '0'; 
 
 	-- Rd register adress memory(load and store) ou R14 pour branch and link
 	inval_mem_adr <= mtrans_rd 		when mtrans_t = '1' else
-					 X"E"			when bl_i     = '1'
+					 X"E"			when bl_i     = '1' else
+						ld_dest		when trans_t  = '1'
 									else if_ir(19 downto 16);
 
-	-- invalide Rn register adress memory
-	inval_mem	<=	'1'	when mtrans_t = '1' or swap_t = '1' or trans_t = '1' or bl_i = '1' 
+	-- invalide Rd register adress memory
+	inval_mem	<=	'1'	when cond = '1' and condv = '1' and  reg_pcv = '1' and operv = '1' and cur_state = RUN and
+				 			(
+								mtrans_t = '1' or swap_t = '1' or ldr_i = '1' or ldrb_i = '1' or bl_i = '1' 
+							 )
 						else '0';
 
 	-- S = 1 ou les instructions TST, TEQ, CMP
@@ -829,6 +832,8 @@ begin
 	report "radr2 = " & integer'image(to_integer(unsigned(radr2)));
 	report "radr3 = " & integer'image(to_integer(unsigned(radr3)));
 
+
+
 	--report "rvalid1 = " & std_logic'image(rvalid1);
 	--report "rvalid2 = " & std_logic'image(rvalid2);
 	--report "rvalid3 = " & std_logic'image(rvalid3);
@@ -868,6 +873,11 @@ begin
 	report "shift_asr = " & std_logic'image(shift_asr);
 	report "shift_rrx = " & std_logic'image(shift_rrx);
 	report "shift_val = " & integer'image(to_integer(unsigned(shift_val)));
+
+	report " ldr_i  = " & std_logic'image(ldr_i );
+	report " str_i  = " & std_logic'image(str_i );
+	report " ldrb_i = " & std_logic'image(ldrb_i);
+	report " strb_i = " & std_logic'image(strb_i); 
 
 	case cur_state is
 
