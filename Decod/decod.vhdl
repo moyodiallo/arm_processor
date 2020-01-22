@@ -338,11 +338,8 @@ signal cur_state, next_state : state_type;
 signal debug_state : Std_Logic_Vector(3 downto 0) := X"0";
 signal clock_count: std_logic_vector(31 downto 0);
 
--- branchement manipulation
-signal branch_alu_dest      : std_logic_vector(3 downto 0);
-signal branch_inval_exe_adr : std_logic_vector(3 downto 0);
-signal branch_invalid		: std_logic;
-signal branch_alu_wb		: std_logic;
+signal invalid_branch: std_logic;
+
 
 begin
 
@@ -553,24 +550,24 @@ begin
 	mla_i <= '1' when mult_t = '1' and if_ir(21) = '1' else '0';
 
 -- trans instruction
-	ldr_i  <= '1' when trans_t = '1' and  if_ir(20) = '1' and if_ir(22) = '0';
-	str_i  <= '1' when trans_t = '1' and  if_ir(20) = '0' and if_ir(22) = '0';
-	ldrb_i <= '1' when trans_t = '1' and  if_ir(20) = '1' and if_ir(22) = '1';
-	strb_i <= '1' when trans_t = '1' and  if_ir(20) = '0' and if_ir(22) = '1';
+	ldr_i  <= '1' when trans_t = '1' and  if_ir(20) = '1' and if_ir(22) = '0' else '0';
+	str_i  <= '1' when trans_t = '1' and  if_ir(20) = '0' and if_ir(22) = '0' else '0';
+	ldrb_i <= '1' when trans_t = '1' and  if_ir(20) = '1' and if_ir(22) = '1' else '0';
+	strb_i <= '1' when trans_t = '1' and  if_ir(20) = '0' and if_ir(22) = '1' else '0';
 
 -- mtrans instruction
-	ldm_i <= '1' when mtrans_t = '1' and if_ir(20) = '1';
-	stm_i <= '1' when mtrans_t = '1' and if_ir(20) = '0';
+	ldm_i <= '1' when mtrans_t = '1' and if_ir(20) = '1' else '0';
+	stm_i <= '1' when mtrans_t = '1' and if_ir(20) = '0' else '0';
 
--- branch instruction
-	b_i  <= '1' when branch_t = '1' and if_ir(24) = '0';
-	bl_i <= '1' when branch_t = '1' and if_ir(24) = '1';
+-- branch instruction LOOOOOL
+	b_i  <= '1' when branch_t = '1' and if_ir(24) = '0' else '0';
+	bl_i <= '1' when branch_t = '1' and if_ir(24) = '1' else '0';
 
 -- Decode interface operands
 	offset32 <=	("00000000" & if_ir(23 downto 0)) when if_ir(23) = '0' else 
 				("11111111" & if_ir(23 downto 0));
 
-	op1 <=	offset32		when branch_t = '1' else 
+	op1 <=	reg_pc		  	when branch_t = '1' else 
 			X"00000000"     when (mvn_i = '1' or mov_i ='1') else rdata1;
 
 	op2	<=	offset32	                      when branch_t  = '1'  else 
@@ -580,14 +577,14 @@ begin
 		 not rdata2 						  when (bic_i = '1' or mvn_i = '1') else rdata2;
 
 	-- ecrire dans PC et autre
-	alu_dest <=	branch_alu_dest		when branch_t = '1' else
+	alu_dest <=	X"F" 				when branch_t = '1' else
 				if_ir(19 downto 16) when mult_t   = '1' else
 				if_ir(3 downto 0) 	when mtrans_t = '1' 
 									else if_ir(15 downto 12);
 
 	--unitiles pour TST, TEQ, CMP
-	alu_wb	<= '1'			when 	(if_ir(24 downto 23) /= "10" and regop_t = '1') else
-		branch_alu_wb		when	 b_i = '1'	
+	alu_wb	<= '1'			when 	(if_ir(24 downto 23) /= "10" and regop_t = '1') or
+							     	b_i = '1'	
 							else '0';
  
 	--pour les TST, TEQ, CMP
@@ -606,28 +603,31 @@ begin
 	radr3 <= if_ir(11 downto 8);
 	--'0' when str_i = '1' or strb_i = '1'
 
+
 -- Reg Invalid
 	-- Rd register
 	inval_exe_adr <=  if_ir(19 downto 16)	when mult_t = '1' else
-					branch_inval_exe_adr 	when b_i = '1'
+					  X"F" 					when b_i = '1'
 											else if_ir(15 downto 12);
 	-- invalide Rd & --pas TST, TEQ, CMP
-	inval_exe <='1'		when cur_state = RUN and ((if_ir(24 downto 23) /= "10" and
-								regop_t = '1' and if_ir(31 downto 28) = X"E" ) or
-						 	(mult_t = '1'  and if_ir(31 downto 28) = X"E") or
+	inval_exe <='1'	when cond = '1' and ((if_ir(24 downto 23) /= "10" 
+									and regop_t = '1' and if_ir(31 downto 28) = X"E") or
+							 (mult_t = '1'  and if_ir(31 downto 28) = X"E") or
+							 (branch_t  = '1'  and if_ir(31 downto 28) = X"E") or
 
 						 	-- pour les inst conditionnel(attente des flags)
-						 	(regop_t = '1' and condv = '1' and if_ir(31 downto 28) /= X"E") or
-						 	(mult_t = '1'  and condv = '1' and if_ir(31 downto 28) /= X"E")) else
-		branch_invalid	when (branch_t = '1') 
+						 	(regop_t = '1' 	 and condv = '1' and if_ir(31 downto 28) /= X"E") or
+							(mult_t = '1'  	 and condv = '1' and if_ir(31 downto 28) /= X"E") or 
+							(branch_t  = '1' and condv = '1' and if_ir(31 downto 28) /= X"E"))
 						else '0'; 
 
 	-- Rn register adress memory(load and store) ou R14 pour branch and link
-	inval_mem_adr <= mtrans_rd 		when mtrans_t = '1'
+	inval_mem_adr <= mtrans_rd 		when mtrans_t = '1' else
+					 X"E"			when bl_i     = '1'
 									else if_ir(19 downto 16);
 
 	-- invalide Rn register adress memory
-	inval_mem	<=	'1'	when mtrans_t = '1' or trans_t = '1'
+	inval_mem	<=	'1'	when mtrans_t = '1' or swap_t = '1' or trans_t = '1' or bl_i = '1' 
 						else '0';
 
 	-- S = 1 ou les instructions TST, TEQ, CMP
@@ -782,15 +782,10 @@ inc_pc  <= dec2if_push;
 dec_pop <= if2dec_pop;
 
 --state machine process.
-process (branch_invalid,branch_alu_dest,branch_inval_exe_adr,ck
-		,cur_state, dec2if_full, cond, condv, operv, dec2exe_full, if2dec_empty, reg_pcv, bl_i,
+process (invalid_branch,ck,cur_state, dec2if_full, cond, condv, operv, dec2exe_full, if2dec_empty, reg_pcv, bl_i,
 			branch_t, and_i, eor_i, sub_i, rsb_i, add_i, adc_i, sbc_i, rsc_i, orr_i, mov_i, bic_i,
 			mvn_i, ldr_i, ldrb_i, ldm_i, stm_i, if_ir, mtrans_rd, mtrans_mask_shift)
 begin
-
-	--if X"eafffff6" = if_ir then 
-	--	assert false report "astopp" severity failure;
-	--end if;
 
 	if debug_state = X"1" then 
 
@@ -813,17 +808,20 @@ begin
 	report "cond     = " & std_logic'image(cond);
 	report "condv    = " & std_logic'image(condv);
 	report "operv    = " & std_logic'image(operv);
-	report "branch_t = " & std_logic'image(b_i);
-	report "b_i = " & std_logic'image(branch_t);
+	report "branch_t = " & std_logic'image(branch_t);
+	report "b_i = " & std_logic'image(b_i);
+	report "bl_i = " & std_logic'image(bl_i);
 	report "reg_pcv  = " & std_logic'image(reg_pcv);
 	
-	report "invalid_branch  = " & std_logic'image(branch_invalid);
+	report "invalid_branch  = " & std_logic'image(invalid_branch);
 	
 	report "inval_exe_adr = " & integer'image(to_integer(unsigned(inval_exe_adr)));
 	report "inval_exe     = " & std_logic'image(inval_exe);
 
 	report "inval_mem_adr = " & integer'image(to_integer(unsigned(inval_mem_adr)));
 	report "inval_mem     = " & std_logic'image(inval_mem);
+	
+	report "if_ir(15 downto 12) = " & integer'image(to_integer(unsigned(if_ir(15 downto 12))));
 	
 	report "radr1 = " & integer'image(to_integer(unsigned(radr1)));
 	report "radr2 = " & integer'image(to_integer(unsigned(radr2)));
@@ -901,12 +899,15 @@ begin
 		mtrans_shift    <= '0';
 		mtrans_loop_adr <= '0';
 
-		-- ecrire la premiere valeur PC vers IFETCH
+		-- ecrire les premieres valeur PC vers IFETCH
 		if dec2if_full = '0' and reg_pcv = '1' then
 			dec2if_push <= '1';
-			next_state  <= RUN;
 		else
 			dec2if_push <= '0';
+		end if;
+
+		if dec2if_full = '1' and reg_pcv = '1' then
+			next_state <= RUN;
 		end if;
 
 	when RUN =>
@@ -940,6 +941,8 @@ begin
 						next_state <= MTRANS;
 					elsif bl_i = '1' then
 						next_state <= LINK;
+					else 
+						next_state <= RUN;
 					end if;
 
 				end if;
@@ -956,20 +959,6 @@ begin
 		else
 			dec2if_push <= '0';
 		end if;
-
-		-- pour l'invalidation du registre 15, pour le branchement
-		if 	(branch_t  = '1'  and if_ir(31 downto 28) = X"E" and cond = '1') or 
-			(branch_t  = '1'  and condv = '1' and if_ir(31 downto 28) /= X"E" and cond = '1') 
-			then
-			branch_invalid   	 <= '1';
-			branch_alu_dest  	 <= X"F";
-			branch_inval_exe_adr <= X"F";
-			branch_alu_wb		 <= '1';
-		else 
-			branch_invalid <= '0';
-			branch_inval_exe_adr <= X"0";
-		end if;
-		
 		
 	when BRANCH =>
 		--report "--> BRANCH";
@@ -980,13 +969,9 @@ begin
 		mtrans_loop_adr <= '0';
 		blink           <= '0';
 
-		branch_invalid  <= '0';
-		--dec2if_push     <= '0';
-
 		-- purger l'instruction suivant
 		if if2dec_empty = '0' then
 			if2dec_pop <= '1';
-			report "poper "& std_logic'image(reg_pcv);
 		else 
 			if2dec_pop <= '0';
 		end if;
@@ -996,8 +981,6 @@ begin
 			next_state 	   <= FETCH;
 			--assert false report "return from branch" severity failure;
 		end if;
-
-		--assert false report "return from branch" severity failure;
 
 	when LINK => 
 		--report "--> LINK";
