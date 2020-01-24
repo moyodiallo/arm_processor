@@ -21,7 +21,14 @@ end Shifter;
 
 architecture archi of Shifter is
 signal shift : std_logic_vector(4 downto 0);
-signal s : std_logic_vector(32 downto 0);
+signal s     : std_logic_vector(32 downto 0);
+
+signal val_32_moins_shift_val : std_logic_vector(5 downto 0);
+signal val_31_moins_shift_val : std_logic_vector(5 downto 0);
+signal val_33_moins_shift_val : std_logic_vector(5 downto 0);
+signal val_shift_val_moins_1  : std_logic_vector(5 downto 0);
+signal val_shift_val_moins_2  : std_logic_vector(5 downto 0);
+
 begin
 	shift <=  shift_rrx & shift_ror & shift_asr & shift_lsr &  shift_lsl;
 	s<= din & cin;
@@ -30,7 +37,8 @@ begin
 	
 	dout<=(others => '0');
 	case shift_val is 
-	when "00000"=>  cout <= cin;
+	when "00000"=>  
+			cout <= cin;
 			dout <= din;
 	when others =>
 		case shift is
