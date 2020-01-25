@@ -69,14 +69,26 @@ end Reg;
 
 architecture Behavior OF Reg is
 type registers_array is array (15 downto 0) of std_logic_vector(31 downto 0);
-type inval_array     is array (15 downto 0) of std_logic;
 signal REGS   : registers_array;
-signal invals : inval_array; -- 1 c'est invalid, 0 est valid
+signal invals : std_logic_vector(15 downto 0); -- 1 c'est invalid, 0 est valid
 signal cry,zero,neg,ovr,cznv,vv : std_logic;
+
+signal wadr1_invalid : std_logic;
+signal wadr2_invalid : std_logic;
+
+signal inval_adr1_invalid : std_logic;
+signal inval_adr2_invalid : std_logic;
+
 begin 
-process(ck)-- write process (sync)
+process(ck, wadr1, wadr2, inval_adr1, inval_adr2, invals)-- write process (sync)
 begin
 	
+	wadr1_invalid <= invals(to_integer(unsigned(wadr1)));
+	wadr2_invalid <= invals(to_integer(unsigned(wadr2)));
+
+	inval_adr1_invalid <= invals(to_integer(unsigned(inval_adr1)));
+	inval_adr2_invalid <= invals(to_integer(unsigned(inval_adr2)));
+
 	if(rising_edge(ck)) then
 		--report "PC ink reg= " & std_logic'image(inc_pc);
 		--active low reset
@@ -85,36 +97,34 @@ begin
 				  invals(i) <= '0';
 				  REGS(i)   <= X"00000000";
 			end loop;
-			report "PC initalized = " & std_logic'image(Regs(15)(0));
 			cznv   <= '1';
 			vv     <= '1';
 		else
+
 
 			--report "wen1 "& std_logic'image(wen1);
 			--report "invalw1" & std_logic'image(invals(to_integer(unsigned(wadr1))));
 			--report "invalid1 " & integer'image(to_integer(unsigned(inval_adr1)));
 
 			if( wen1 = '1' and wen2 = '1' and wadr1 = wadr2 
-				and invals(to_integer(unsigned(wadr1))) = '1'
-				and invals(to_integer(unsigned(wadr2))) = '1') 
+				and wadr1_invalid = '1'
+				and wadr2_invalid = '1') 
 			then
-				report "writing port 1 ("& to_hstring(wadr1) &")= " & to_hstring(wdata1);
+				--report "writing port 1 ("& to_hstring(wadr1) &")= " & to_hstring(wdata1);
 				REGS(to_integer(unsigned(wadr1)))   <= wdata1;
 				invals(to_integer(unsigned(wadr1))) <= '0';
-			else
-				-- write 2 	
-				if (wen2 = '1' and invals(to_integer(unsigned(wadr2))) = '1') then
-					report "writing port 2 ("& to_hstring(wadr2) &")= " & to_hstring(wdata2);
-					REGS(to_integer(unsigned(wadr2)))   <= wdata2;
-					invals(to_integer(unsigned(wadr2))) <= '0';
-				end if;
+			
+			-- write 2 	
+			elsif (wen2 = '1' and wadr2_invalid  = '1') then
+				--report "writing port 2 ("& to_hstring(wadr2) &")= " & to_hstring(wdata2);
+				REGS(to_integer(unsigned(wadr2)))   <= wdata2;
+				invals(to_integer(unsigned(wadr2))) <= '0';
 
-				-- write 1
-				if(wen1 = '1' and invals(to_integer(unsigned(wadr1))) = '1') then
-					report "writing port 1 ("& to_hstring(wadr1) &")= " & to_hstring(wdata1);
-					REGS(to_integer(unsigned(wadr1)))   <= wdata1;
-					invals(to_integer(unsigned(wadr1))) <= '0';
-				end if;
+			-- write 1
+			elsif(wen1 = '1' and wadr1_invalid = '1') then
+				--report "writing port 1 ("& to_hstring(wadr1) &")= " & to_hstring(wdata1);
+				REGS(to_integer(unsigned(wadr1)))   <= wdata1;
+				invals(to_integer(unsigned(wadr1))) <= '0';	
 
 			end if;
 
@@ -137,12 +147,10 @@ begin
 			end if;
 
 			--invalidate Regs and flags (on invalid si c'est valide)
-			if 	inval1 = '1' and invals(to_integer(unsigned(inval_adr1))) = '0'then 
-				report "invalid1 " & integer'image(to_integer(unsigned(inval_adr1)));	
+			if 	inval1 = '1' and inval_adr1_invalid  = '0'then 
+				--report "invalid1 " & integer'image(to_integer(unsigned(inval_adr1)));	
 				invals(to_integer(unsigned(inval_adr1))) <= '1';
-			end if;
-
-			if 	inval2 = '1' and invals(to_integer(unsigned(inval_adr2))) = '0' then
+			elsif inval2 = '1' and inval_adr2_invalid = '0' then
 				--report "invalid2 " & integer'image(to_integer(unsigned(inval_adr2)));
 				invals(to_integer(unsigned(inval_adr2))) <= '1';
 			end if;
