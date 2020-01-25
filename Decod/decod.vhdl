@@ -237,35 +237,38 @@ signal bl_i   : Std_Logic;
 signal blink    : Std_Logic;
 
 -- Multiple transferts
-signal mtrans_shift : Std_Logic;
+--signal mtrans_loop_adr   : Std_Logic;
+--signal mtrans_1un        : Std_Logic;
+--signal mtrans_nbr 		 : Std_Logic_Vector(4 downto 0);
 
 signal mtrans_mask_shift : Std_Logic_Vector(15 downto 0);
-signal mtrans_mask : Std_Logic_Vector(15 downto 0);
-signal mtrans_list : Std_Logic_Vector(15 downto 0);
-signal mtrans_1un : Std_Logic;
-signal mtrans_loop_adr : Std_Logic;
-signal mtrans_nbr : Std_Logic_Vector(4 downto 0);
-signal mtrans_rd : Std_Logic_Vector(3 downto 0);
+signal mtrans_mask 		 : Std_Logic_Vector(15 downto 0);
+signal mtrans_list 		 : Std_Logic_Vector(15 downto 0);
+signal mtrans_rd  		 : Std_Logic_Vector(3 downto 0);
+signal mtrans_shift 	 : Std_Logic;
+signal mtrans_op_2    	 : std_logic_vector(31 downto 0);
+signal mtrans_last		 : std_logic;
+signal mtrans_writeback  : std_logic;
 
 -- RF read ports
-signal radr1 : Std_Logic_Vector(3 downto 0);
-signal rdata1 : Std_Logic_Vector(31 downto 0);
-signal rvalid1 : Std_Logic;
+signal radr1 	: Std_Logic_Vector(3 downto 0);
+signal rdata1 	: Std_Logic_Vector(31 downto 0);
+signal rvalid1 	: Std_Logic;
 
-signal radr2 : Std_Logic_Vector(3 downto 0);
-signal rdata2 : Std_Logic_Vector(31 downto 0);
-signal rvalid2 : Std_Logic;
+signal radr2 	: Std_Logic_Vector(3 downto 0);
+signal rdata2 	: Std_Logic_Vector(31 downto 0);
+signal rvalid2 	: Std_Logic;
 
-signal radr3 : Std_Logic_Vector(3 downto 0);
-signal rdata3 : Std_Logic_Vector(31 downto 0);
-signal rvalid3 : Std_Logic;
+signal radr3 	: Std_Logic_Vector(3 downto 0);
+signal rdata3 	: Std_Logic_Vector(31 downto 0);
+signal rvalid3 	: Std_Logic;
 
 -- RF inval ports
 signal inval_exe_adr : Std_Logic_Vector(3 downto 0);
-signal inval_exe : Std_Logic;
+signal inval_exe 	 : Std_Logic;
 
 signal inval_mem_adr : Std_Logic_Vector(3 downto 0);
-signal inval_mem : Std_Logic;
+signal inval_mem 	 : Std_Logic;
 
 -- Flags
 signal cry	: Std_Logic;
@@ -274,13 +277,13 @@ signal neg	: Std_Logic;
 signal ovr	: Std_Logic;
 
 signal reg_cznv : Std_Logic;
-signal reg_vv : Std_Logic;
+signal reg_vv   : Std_Logic;
 
 signal inval_czn : Std_Logic;
 signal inval_ovr : Std_Logic;
 
 -- PC
-signal reg_pc : Std_Logic_Vector(31 downto 0);
+signal reg_pc  : Std_Logic_Vector(31 downto 0);
 signal reg_pcv : Std_Logic;
 signal inc_pc  : Std_Logic;
 
@@ -331,7 +334,7 @@ signal alu_cmd		: Std_Logic_Vector(1 downto 0);
 
 -- DECOD FSM
 
-type state_type is (FETCH, RUN, BRANCH, LINK, MTRANS);
+type state_type is (FETCH, RUN, BRANCH, LINK, MTRANS, MULT);
 signal cur_state, next_state : state_type;
 
 -- for debug
@@ -341,6 +344,16 @@ signal clock_count: std_logic_vector(31 downto 0);
 signal link_op_2 	 : std_logic_vector(31 downto 0);
 signal link_dest 	 : std_logic_vector(3 downto 0);
 signal link_shift_va : std_logic_vector(4 downto 0);
+
+-- Multiplier with booth's algorithm
+signal mult_AQQ_1 		: std_logic_vector(64 downto 0);	
+signal mult_minus 		: std_logic;
+signal mult_op1   		: std_logic_vector(31 downto 0);
+signal mult_op2   		: std_logic_vector(31 downto 0);
+signal mult_count 		: std_logic_vector(31 downto 0);
+signal mult_do_calcul   : std_logic;
+signal mult_start 		: std_logic;
+signal mult_invalid  	: std_logic;
 
 begin
 
@@ -568,20 +581,23 @@ begin
 	offset32 <=	("00000000" & if_ir(23 downto 0)) when if_ir(23) = '0' else 
 				("11111111" & if_ir(23 downto 0));
 
-	op1 <=	reg_pc		  	when branch_t = '1' else 
+	op1 <=	reg_pc		  	when branch_t = '1' else
+			mult_op1        when mult_t   = '1' else 
 			X"00000000"     when (mvn_i = '1' or mov_i ='1') else rdata1;
 
 	op2	<=	 offset32	                      when b_i  = '1'  else
-			 link_op_2 					  when bl_i = '1' else
+			 link_op_2 					  	  when bl_i = '1' else
 			 (X"000000" & if_ir(7 downto 0))  when if_ir(25) = '1' and regop_t = '1' and if_ir(7) = '0' else
 			 (X"111111" & if_ir(7 downto 0))  when if_ir(25) = '1' and regop_t = '1' and if_ir(7) = '1' else
 		 not (X"000000" & if_ir(7 downto 0))  when if_ir(25) = '1' and (bic_i  = '1' or mvn_i ='1') and if_ir(7) = '0' else
 		 not (X"111111" & if_ir(7 downto 0))  when if_ir(25) = '1' and (bic_i  = '1' or mvn_i ='1') and if_ir(7) = '1' else
 			 (X"00000" & if_ir(11 downto 0))  when if_ir(25) = '0' and trans_t = '1' and if_ir(11) = '0' else 
 			 (X"11111" & if_ir(11 downto 0))  when if_ir(25) = '0' and trans_t = '1' and if_ir(11) = '1' else
-		 not rdata2 						  when (bic_i = '1' or mvn_i = '1') else rdata2;
+		 not rdata2 						  when (bic_i = '1' or mvn_i = '1') else 
+			 mtrans_op_2					  when (mtrans_t = '1') else 
+			 mult_op2 						  when (mult_t   = '1') else rdata2;
 
-	-- ecrire dans PC et autre
+	-- ecrire dans PC ou autre
 	alu_dest <=	X"F" 				when b_i = '1' else
 				if_ir(19 downto 16) when mult_t   = '1' else
 				if_ir(3 downto 0) 	when mtrans_t = '1' else 
@@ -590,7 +606,10 @@ begin
 
 	--unitiles pour TST, TEQ, CMP
 	alu_wb	<= '1'			when 	(if_ir(24 downto 23) /= "10" and regop_t = '1') or 
-									b_i = '1' or bl_i = '1' or (trans_t = '1' and if_ir(21) = '1') 	
+									b_i = '1' or 
+									bl_i = '1' or 
+									(trans_t = '1' and if_ir(21) = '1') else
+			mult_invalid	when 	mult_t = '1' 	
 							else '0';
  
 	--pour les TST, TEQ, CMP
@@ -606,29 +625,32 @@ begin
 
 	-- Rs , pour mla_i , multiplication avec A <- 0, 
 	-- pour load and store (source/destination)
-	radr3 <= if_ir(15 downto 12) 	when trans_t = '1' 
+	radr3 <= if_ir(15 downto 12) 	when trans_t  = '1' else
+				mtrans_rd 			when mtrans_t = '1'
 									else if_ir(11 downto 8);
 	--'0' when str_i = '1' or strb_i = '1'
 
 
 -- Reg Invalid
 	-- Rd register / Rn for load and store
-	inval_exe_adr <=  if_ir(19 downto 16)	when mult_t = '1' or trans_t = '1' else
+	inval_exe_adr <=  if_ir(19 downto 16)	when mult_t = '1' or trans_t = '1' or mtrans_t = '1' else
 					link_dest				when bl_i = '1' else
 					  X"F" 					when b_i  = '1'
 											else if_ir(15 downto 12);
 	-- invalide Rd & --pas TST, TEQ, CMP
-	inval_exe <='1'	when cond = '1' and condv = '1' 
-						 and reg_pcv = '1' 
-						 and operv = '1' 
-						 and (cur_state = RUN or bl_i = '1')
-						 and
-							(
-								(regop_t = '1' and if_ir(24 downto 23) /= "10") or
-								 mult_t = '1'  or branch_t = '1' or 
-								(trans_t = '1' and if_ir(21) = '1')
-							)
-					else '0';
+	inval_exe <='1'			when cond = '1' and condv = '1' 
+								 and reg_pcv = '1' 
+								 and operv = '1' 
+								 and (cur_state = RUN or bl_i = '1')
+								 and
+									(
+										(regop_t = '1' and if_ir(24 downto 23) /= "10") or 
+										branch_t = '1' or 
+										(trans_t = '1' and if_ir(21) = '1')
+									)else 
+		  mtrans_writeback 	when mtrans_t = '1' else
+		  mult_invalid		when mult_t   = '1'
+					       	else '0';
 
 	-- Rd register adress memory(load and store) ou R14 pour branch and link
 	inval_mem_adr <= mtrans_rd 		when mtrans_t = '1' else
@@ -707,11 +729,15 @@ begin
 
 -- Alu operand selection
 	comp_op1 <=	'1' when rsb_i = '1' or rsc_i = '1' else '0';
-	comp_op2 <=	'1' when sub_i = '1' or cmp_i = '1' or sbc_i = '1'
+	comp_op2 <=	'1' when sub_i = '1' or cmp_i = '1' or sbc_i = '1' or
+						 (if_ir(23) = '1' and (trans_t = '1' or mtrans_t = '1')) else
+		mult_minus	when mult_t = '1'
 					else '0';
 
 	alu_cy <=	exe_c 	when adc_i = '1' or sbc_i = '1' or rsc_i = '1' else 
-					'1' when sub_i = '1' or rsb_i = '1' or cmp_i = '1'
+					'1' when sub_i = '1' or rsb_i = '1' or cmp_i = '1' or 
+							 (if_ir(23) = '1' and (trans_t = '1' or mtrans_t = '1')) else
+		mult_minus 		when mult_t = '1'
 						else '0';
 
 -- Alu command
@@ -722,8 +748,33 @@ begin
 -- Mtrans reg list
 	process (ck)
 	begin
-		--if (rising_edge(ck)) then
-		--end if;
+		if (rising_edge(ck) and mtrans_shift = '1') then
+
+			mtrans_mask  <= mtrans_mask and mtrans_mask_shift;
+			mtrans_shift <= '0'; -- un transfert effectuer
+			
+			if    mtrans_op_2 = X"00000000" then mtrans_op_2 <= X"00000004";
+			elsif mtrans_op_2 = X"00000004" then mtrans_op_2 <= X"00000008";
+			elsif mtrans_op_2 = X"00000008" then mtrans_op_2 <= X"0000000C";
+			elsif mtrans_op_2 = X"0000000C" then mtrans_op_2 <= X"00000010";
+			elsif mtrans_op_2 = X"00000010" then mtrans_op_2 <= X"00000014";
+			elsif mtrans_op_2 = X"00000014" then mtrans_op_2 <= X"00000018";
+			elsif mtrans_op_2 = X"00000018" then mtrans_op_2 <= X"0000001C";
+			elsif mtrans_op_2 = X"0000001C" then mtrans_op_2 <= X"00000020";
+			elsif mtrans_op_2 = X"00000020" then mtrans_op_2 <= X"00000024";
+			elsif mtrans_op_2 = X"00000024" then mtrans_op_2 <= X"00000028";
+			elsif mtrans_op_2 = X"00000028" then mtrans_op_2 <= X"0000002C";
+			elsif mtrans_op_2 = X"0000002C" then mtrans_op_2 <= X"00000030";
+			elsif mtrans_op_2 = X"00000030" then mtrans_op_2 <= X"00000034";
+			elsif mtrans_op_2 = X"00000034" then mtrans_op_2 <= X"00000038";
+			elsif mtrans_op_2 = X"00000038" then mtrans_op_2 <= X"0000003C";
+			elsif mtrans_op_2 = X"0000003C" then mtrans_op_2 <= X"00000040";
+			elsif mtrans_op_2 = X"00000040" then mtrans_op_2 <= X"00000044";
+			elsif mtrans_op_2 = X"00000044" then mtrans_op_2 <= X"00000048";
+			elsif mtrans_op_2 = X"00000048" then mtrans_op_2 <= X"0000004C";
+			end if;
+
+		end if;
 	end process;
 
 	mtrans_mask_shift <= X"FFFE" when if_ir(0)  = '1' and mtrans_mask(0)  = '1' else
@@ -745,11 +796,30 @@ begin
 
 	mtrans_list <= if_ir(15 downto 0) and mtrans_mask;
 
-	process (mtrans_list)
-	begin
-	end process;
+	--process (mtrans_list)
+	--begin
+	--end process;
 
-	mtrans_1un <= '1' when mtrans_nbr = "00001" else '0';
+	--mtrans_1un <= '1' when mtrans_nbr = "00001" else '0';
+	mtrans_last <= '1'  when 	(mtrans_list xor X"0001") = X"0000" or
+						 	 	(mtrans_list xor X"0002") = X"0000" or
+						 	 	(mtrans_list xor X"0004") = X"0000" or
+						 	 	(mtrans_list xor X"0008") = X"0000" or
+						 	 	(mtrans_list xor X"0010") = X"0000" or
+						 	 	(mtrans_list xor X"0020") = X"0000" or
+						 	 	(mtrans_list xor X"0040") = X"0000" or
+						 	 	(mtrans_list xor X"0080") = X"0000" or
+						 	 	(mtrans_list xor X"0100") = X"0000" or
+						 	 	(mtrans_list xor X"0200") = X"0000" or
+						 	 	(mtrans_list xor X"0400") = X"0000" or
+						 	 	(mtrans_list xor X"0800") = X"0000" or
+						 	 	(mtrans_list xor X"1000") = X"0000" or
+						 	 	(mtrans_list xor X"2000") = X"0000" or
+						 	 	(mtrans_list xor X"4000") = X"0000" or
+						 	 	(mtrans_list xor X"8000") = X"0000"
+						else '0';					
+
+
 
 	-- Rd register
 	mtrans_rd <=	X"0" when mtrans_list(0)  = '1' else
@@ -769,10 +839,13 @@ begin
 					X"E" when mtrans_list(14) = '1' else
 					X"F";
 
+	
+
+					
+	
 -- FSM
 process (ck)
 begin
-
 	if (rising_edge(ck)) then
 		if (reset_n = '0') then
 			cur_state <= FETCH;
@@ -782,6 +855,7 @@ begin
 	end if;
 
 end process;
+
 
 -- Clock count for debug
 process (ck)
@@ -800,7 +874,8 @@ inc_pc  <= dec2if_push;
 dec_pop <= if2dec_pop;
 
 --state machine process.
-process (ck,cur_state, dec2if_full, cond, condv, operv, dec2exe_full, if2dec_empty, reg_pcv, bl_i,
+process (ck, mult_AQQ_1,mult_minus, mult_do_calcul, mult_count,
+	cur_state, dec2if_full, cond, condv, operv, dec2exe_full, if2dec_empty, reg_pcv, bl_i,
 			branch_t, and_i, eor_i, sub_i, rsb_i, add_i, adc_i, sbc_i, rsc_i, orr_i, mov_i, bic_i,
 			mvn_i, ldr_i, ldrb_i, ldm_i, stm_i, if_ir, mtrans_rd, mtrans_mask_shift)
 begin
@@ -890,6 +965,24 @@ begin
 	report " ldrb_i = " & std_logic'image(ldrb_i);
 	report " strb_i = " & std_logic'image(strb_i); 
 
+	report "mult_count = "& to_hstring(mult_count);
+	report "mult_op1   = "& to_hstring(mult_op1); 
+	report "mult_op2   = "& to_hstring(mult_op2);
+	report "mult_AQQ_1 = "& to_hstring(mult_AQQ_1);
+	report "mult_start = "& std_logic'image(mult_start);
+	report "mult_t     = "& std_logic'image(mult_t);
+	report "mult_do_cal= "& std_logic'image(mult_do_calcul);
+	report "mult_inval = "& std_logic'image(mult_invalid);
+	report "rdata1     = "& to_hstring(rdata1);
+	report "rdata2     = "& to_hstring(rdata2);
+	report "rdata3     = "& to_hstring(rdata3);
+	report "mult_AQQ_1(64  downto 33);    = "& to_hstring(mult_AQQ_1(64  downto 33));
+	report "mult_AQQ_1(64  downto 0);    = "& to_hstring(mult_AQQ_1(64  downto 0));
+	report "mult_AQQ_1(32  downto 0);    = "& to_hstring(mult_AQQ_1(32  downto 0));
+
+
+	    
+ 
 	case cur_state is
 
 		when FETCH =>
@@ -902,6 +995,8 @@ begin
 			report "--> state = LINK";
 		when MTRANS => 
 			report "--> state = MTRANS";
+		when MULT =>
+			report "--> state = MULT";
 		
 	end case;
 
@@ -920,7 +1015,7 @@ begin
 		dec2exe_push 	<= '0';
 		
 		mtrans_shift    <= '0';
-		mtrans_loop_adr <= '0';
+		--mtrans_loop_adr <= '0';
 
 		-- ecrire les premieres valeur PC vers IFETCH
 		if dec2if_full = '0' and reg_pcv = '1' then
@@ -936,10 +1031,6 @@ begin
 
 	when RUN =>
 		--report "--> RUN";
-
-		mtrans_shift    <= '0';
-		mtrans_loop_adr <= '0';
-		blink           <= '0';
 
 		-- on change d'etat que si une instruction est a executer
 		if      operv = '1' 
@@ -957,10 +1048,10 @@ begin
 					-- instruction a executer
 					dec2exe_push <= '1';
 
-					if bl_i = '0' then 
-						if2dec_pop 	<= '1';
+					if bl_i = '1' or mtrans_t = '1' or mult_t = '1' then 
+						if2dec_pop 	<= '0';
 					else 
-						if2dec_pop  <= '0';
+						if2dec_pop  <= '1';
 					end if;
 
 					-- on change d'etat selon la regle et quelque condition
@@ -970,6 +1061,10 @@ begin
 						next_state <= MTRANS;
 					elsif bl_i = '1' then
 						next_state <= LINK;
+					elsif mult_t = '1' then 
+						next_state <= MULT;
+					elsif mtrans_t = '1' then
+						next_state <= MTRANS;
 					else 
 						next_state <= RUN;
 					end if;
@@ -983,7 +1078,10 @@ begin
 
 		
 		-- pour charger la prochaine instruction (cas d'un branch la prochaine est purger)
-		if dec2if_full = '0' and reg_pcv = '1' and  not (branch_t = '1' and condv = '1' and cond = '1') then  
+		if dec2if_full = '0' and reg_pcv = '1' 
+					and  not (branch_t = '1' and condv = '1' and cond = '1') 
+					and  not (mtrans_t = '1' or mult_t = '1') 
+		then  
 			dec2if_push <= '1';
 		else
 			dec2if_push <= '0';
@@ -994,14 +1092,31 @@ begin
 			link_dest 	  <= X"E";
 			link_shift_va <= "00000";
 		end if;
+
+		if mtrans_t = '1' then
+			mtrans_shift  <= '0';
+			mtrans_op_2   <= X"00000000";
+			mtrans_mask  <= X"FFFF";
+		end if;
+
+		if mult_t = '1' then
+			mult_minus 		<= '0';
+			mult_AQQ_1  	<= X"00000000" & rdata3 & "0"; 
+			mult_count  	<= X"FFFFFFFF";
+			mult_op1    	<= X"00000000";
+			mult_op2    	<= X"00000000";
+			mult_start  	<= '0';
+			mult_do_calcul  <= '0'; 
+			mult_invalid    <= '0';
+		end if;
 		
 	when BRANCH =>
 		--report "--> BRANCH";
 
-		dec2exe_push    <= '0';
+		-- mtrans_loop_adr <= '0';
 
+		dec2exe_push    <= '0';
 		mtrans_shift    <= '0';
-		mtrans_loop_adr <= '0';
 		blink           <= '0';
 
 		-- purger l'instruction suivant
@@ -1024,7 +1139,6 @@ begin
 		if2dec_pop   <= '1';
 
 		mtrans_shift    <= '0';
-		mtrans_loop_adr <= '0';
 
 		link_op_2     <= offset32;
 		link_dest 	  <= X"F";
@@ -1032,14 +1146,114 @@ begin
 
 		next_state    <= BRANCH;
 
-		if clock_count = X"0000000A" then
-		assert false report "arret link" severity failure;
-		end if;
 	when MTRANS => 
 		--report "--> MTRANS";
 
-		mtrans_shift    <= '1';
-		mtrans_loop_adr <= '1';
+		if operv = '1' then
+			-- faire un transfert simple
+			if mtrans_last = '0' and mtrans_mask_shift = X"0000" then
+				mtrans_shift <= '1';
+				dec2exe_push <= '1';
+			
+			-- faire le dernier transfert et revenir vers le RUN
+			elsif( (mtrans_last = '1' or mtrans_mask_shift = X"0000")) then
+				mtrans_writeback <= if_ir(21);
+				dec2if_push      <= '1';
+				if2dec_pop 		 <= '1';
+				next_state       <= RUN;
+			end if;
+		else 
+			mtrans_shift <= '0';	
+			dec2exe_push <= '0';
+		end if;
+
+	when MULT => 
+
+		--if clock_count = X"0000000A" then
+		--	assert false report "enter to mult" severity failure;
+		--end if;
+		
+		if mult_do_calcul = '1' then
+			dec2exe_push  <= '1';
+
+			mult_op1 <= mult_AQQ_1(64  downto 33);
+			mult_op2 <= rdata2;
+			
+			if mult_AQQ_1(1 downto 0) = "10" then
+				mult_minus <= '1';
+			end if;
+
+			if mult_AQQ_1(1 downto 0) = "01" then 
+				mult_minus <= '0';
+			end if;	
+		else
+			dec2exe_push <= '0';
+		end if;
+
+		if mult_count = X"00000000" then 
+
+			if2dec_pop   <= '1';
+			dec2exe_push <= '1';
+			dec2if_push  <= '1';
+			
+			mult_invalid <= '1';
+			mult_minus   <= '0';
+			next_state   <= RUN;
+			
+			if if_ir(21) = '1' then
+				mult_op1 <= rdata1; -- Rn
+				mult_op2 <= mult_AQQ_1(32 downto 1);
+			else
+				mult_op1 <= X"00000000";
+				mult_op2 <= mult_AQQ_1(32 downto 1);
+			end if;
+
+		else 
+			if2dec_pop   <= '0';
+		end if;
+
+		-- on debut au premier montant d'horloge
+		if rising_edge(ck) and mult_do_calcul = '1' and mult_count /= X"00000000" then
+			mult_start <= '1';
+		end if;
+
+		-- un calcul est effectuer donc preparer le prochaine
+		if falling_edge(ck) and mult_do_calcul = '1' and mult_start = '1' and mult_count /= X"00000000" then
+			mult_do_calcul <= '0'; 
+
+			-- on shift pour le nouveau calcul
+			if  mult_AQQ_1(1 downto 0) = "10" then 
+				mult_AQQ_1 <= "1" & exe_res & mult_AQQ_1(32 downto 1);
+
+			elsif mult_AQQ_1(1 downto 0) = "01" then 
+				mult_AQQ_1 <= "0" & exe_res & mult_AQQ_1(32 downto 1);
+			end if;
+
+		end if;
+
+		if mult_do_calcul = '0' and mult_count /= X"00000000" then
+
+			-- controle de la multiplication
+			if (mult_AQQ_1(1 downto 0) = "01" or mult_AQQ_1(1 downto 0) = "10") then		
+				mult_do_calcul <= '1';
+				mult_count     <= mult_count(30 downto 0) & "0";
+				report "calcul";
+
+			else
+
+				if  mult_AQQ_1(1 downto 0) = "11" then
+					mult_AQQ_1 <= "1" & mult_AQQ_1(64 downto 1);
+					mult_count <= mult_count(30 downto 0) & "0";
+					report "shifting Moins";
+
+				elsif mult_AQQ_1(1 downto 0) = "00" then 
+					mult_AQQ_1 <= "0" & mult_AQQ_1(64 downto 1);
+					mult_count <= mult_count(30 downto 0) & "0";
+					report "shifting Plus";
+				end if; 
+			end if; 
+
+		end if;
 
 	end case;
 
