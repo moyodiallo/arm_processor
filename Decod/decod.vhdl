@@ -710,12 +710,15 @@ begin
 							 (if_ir(25) = '1' and trans_t = '1' and if_ir(6 downto 5) = "10")
 						else '0';
 
-	shift_ror <= '1' 	when (if_ir(25) = '0' and regop_t = '1' and if_ir(6 downto 5) = "11") or
-							 (if_ir(25) = '1' and trans_t = '1' and if_ir(6 downto 5) = "11") or 
-							 (if_ir(25) = '1' and regop_t = '1')
+	shift_ror <= '1' 	when shift_val /= "00000" and
+							 ((if_ir(25) = '0' and regop_t = '1' and if_ir(6 downto 5) = "11") or
+							 (if_ir(25) = '1' and trans_t = '1' and if_ir(6 downto 5) = "11"))
 						else '0';
 
-	shift_rrx <= '1' 	when shift_lsl = '0' else '0';
+	shift_rrx <= '1' 	when shift_val = "00000" and
+							 ((if_ir(25) = '0' and regop_t = '1' and if_ir(6 downto 5) = "11") or
+							 (if_ir(25) = '1' and trans_t = '1' and if_ir(6 downto 5) = "11"))
+						else '0';
 
 	shift_val <=	"00010"				when b_i = '1' else
 					link_shift_va       when bl_i = '1' else
@@ -744,38 +747,6 @@ begin
 	alu_cmd <=	"01" 	when and_i = '1' or tst_i = '1' or bic_i = '1' else
 				"10" 	when orr_i = '1' else
 				"11" 	when eor_i = '1'  or teq_i = '1' else "00";
-
--- Mtrans reg list
-	process (ck)
-	begin
-		if (rising_edge(ck) and mtrans_shift = '1') then
-
-			mtrans_mask  <= mtrans_mask and mtrans_mask_shift;
-			mtrans_shift <= '0'; -- un transfert effectuer
-			
-			if    mtrans_op_2 = X"00000000" then mtrans_op_2 <= X"00000004";
-			elsif mtrans_op_2 = X"00000004" then mtrans_op_2 <= X"00000008";
-			elsif mtrans_op_2 = X"00000008" then mtrans_op_2 <= X"0000000C";
-			elsif mtrans_op_2 = X"0000000C" then mtrans_op_2 <= X"00000010";
-			elsif mtrans_op_2 = X"00000010" then mtrans_op_2 <= X"00000014";
-			elsif mtrans_op_2 = X"00000014" then mtrans_op_2 <= X"00000018";
-			elsif mtrans_op_2 = X"00000018" then mtrans_op_2 <= X"0000001C";
-			elsif mtrans_op_2 = X"0000001C" then mtrans_op_2 <= X"00000020";
-			elsif mtrans_op_2 = X"00000020" then mtrans_op_2 <= X"00000024";
-			elsif mtrans_op_2 = X"00000024" then mtrans_op_2 <= X"00000028";
-			elsif mtrans_op_2 = X"00000028" then mtrans_op_2 <= X"0000002C";
-			elsif mtrans_op_2 = X"0000002C" then mtrans_op_2 <= X"00000030";
-			elsif mtrans_op_2 = X"00000030" then mtrans_op_2 <= X"00000034";
-			elsif mtrans_op_2 = X"00000034" then mtrans_op_2 <= X"00000038";
-			elsif mtrans_op_2 = X"00000038" then mtrans_op_2 <= X"0000003C";
-			elsif mtrans_op_2 = X"0000003C" then mtrans_op_2 <= X"00000040";
-			elsif mtrans_op_2 = X"00000040" then mtrans_op_2 <= X"00000044";
-			elsif mtrans_op_2 = X"00000044" then mtrans_op_2 <= X"00000048";
-			elsif mtrans_op_2 = X"00000048" then mtrans_op_2 <= X"0000004C";
-			end if;
-
-		end if;
-	end process;
 
 	mtrans_mask_shift <= X"FFFE" when if_ir(0)  = '1' and mtrans_mask(0)  = '1' else
 						 X"FFFC" when if_ir(1)  = '1' and mtrans_mask(1)  = '1' else
@@ -882,103 +853,105 @@ begin
 
 	if debug_state = X"1" then 
 
-	report "------------------------------------------------------------------";
-	report "CK = " & integer'image(to_integer(unsigned(clock_count)));
-	report "PC = " & to_hstring(reg_pc);
-	report "IF_R = " & to_hstring(if_ir);
-	--report "dec_pc = " & integer'image(to_integer(unsigned(if_ir)));
+	--report "------------------------------------------------------------------";
+	--report "CK = " & integer'image(to_integer(unsigned(clock_count)));
+	--report "PC = " & to_hstring(reg_pc);
+	--report "IF_R = " & to_hstring(if_ir);
+	----report "dec_pc = " & integer'image(to_integer(unsigned(if_ir)));
 
-	report "dec2if_push  = " & std_logic'image(dec2if_push);
-	report "dec2exe_push = " & std_logic'image(dec2exe_push);
-	report "if2dec_empty = " & std_logic'image(if2dec_empty);
-	report "if2dec_pop   = " & std_logic'image(if2dec_pop);
+	--report "dec2if_push  = " & std_logic'image(dec2if_push);
+	--report "dec2exe_push = " & std_logic'image(dec2exe_push);
+	--report "if2dec_empty = " & std_logic'image(if2dec_empty);
+	--report "if2dec_pop   = " & std_logic'image(if2dec_pop);
 	
-	report "if2dec_empty  = " & std_logic'image(if2dec_empty);
-	report "dec2if_full   = " & std_logic'image(dec2if_full);
+	--report "if2dec_empty  = " & std_logic'image(if2dec_empty);
+	--report "dec2if_full   = " & std_logic'image(dec2if_full);
 	
 	
-	report "cond     = " & to_hstring(if_ir(31 downto 28));
-	report "cond     = " & std_logic'image(cond);
-	report "condv    = " & std_logic'image(condv);
-	report "operv    = " & std_logic'image(operv);
-	report "branch_t = " & std_logic'image(branch_t);
-	report "b_i = " & std_logic'image(b_i);
-	report "bl_i = " & std_logic'image(bl_i);
-	report "reg_pcv  = " & std_logic'image(reg_pcv);
+	--report "cond     = " & to_hstring(if_ir(31 downto 28));
+	--report "cond     = " & std_logic'image(cond);
+	--report "condv    = " & std_logic'image(condv);
+	--report "operv    = " & std_logic'image(operv);
+	--report "branch_t = " & std_logic'image(branch_t);
+	--report "b_i = " & std_logic'image(b_i);
+	--report "bl_i = " & std_logic'image(bl_i);
+	--report "reg_pcv  = " & std_logic'image(reg_pcv);
 	
-	report "inval_exe_adr = " & integer'image(to_integer(unsigned(inval_exe_adr)));
-	report "inval_exe     = " & std_logic'image(inval_exe);
+	--report "inval_exe_adr = " & integer'image(to_integer(unsigned(inval_exe_adr)));
+	--report "inval_exe     = " & std_logic'image(inval_exe);
 
-	report "inval_mem_adr = " & integer'image(to_integer(unsigned(inval_mem_adr)));
-	report "inval_mem     = " & std_logic'image(inval_mem);
+	--report "inval_mem_adr = " & integer'image(to_integer(unsigned(inval_mem_adr)));
+	--report "inval_mem     = " & std_logic'image(inval_mem);
 	
-	report "if_ir(15 downto 12) = " & integer'image(to_integer(unsigned(if_ir(15 downto 12))));
+	--report "if_ir(15 downto 12) = " & integer'image(to_integer(unsigned(if_ir(15 downto 12))));
 	
-	report "radr1 = " & integer'image(to_integer(unsigned(radr1)));
-	report "radr2 = " & integer'image(to_integer(unsigned(radr2)));
-	report "radr3 = " & integer'image(to_integer(unsigned(radr3)));
+	--report "radr1 = " & integer'image(to_integer(unsigned(radr1)));
+	--report "radr2 = " & integer'image(to_integer(unsigned(radr2)));
+	--report "radr3 = " & integer'image(to_integer(unsigned(radr3)));
 
 
 
-	--report "rvalid1 = " & std_logic'image(rvalid1);
-	--report "rvalid2 = " & std_logic'image(rvalid2);
-	--report "rvalid3 = " & std_logic'image(rvalid3);
+	----report "rvalid1 = " & std_logic'image(rvalid1);
+	----report "rvalid2 = " & std_logic'image(rvalid2);
+	----report "rvalid3 = " & std_logic'image(rvalid3);
 	
-	report "exe_c = " & std_logic'image(exe_c);
-	report "exe_z = " & std_logic'image(exe_z);
-	report "exe_v = " & std_logic'image(exe_v);
-	report "exe_n = " & std_logic'image(exe_n);
+	--report "exe_c = " & std_logic'image(exe_c);
+	--report "exe_z = " & std_logic'image(exe_z);
+	--report "exe_v = " & std_logic'image(exe_v);
+	--report "exe_n = " & std_logic'image(exe_n);
 	
-	report "exe_res     = 0x" & to_hstring(exe_res);
-	report "exe_dest    = " & integer'image(to_integer(unsigned(exe_dest)));
-	report "exe_wb      = " & std_logic'image(exe_wb);
-	report "exe_flag_wb = " & std_logic'image(exe_flag_wb);
-	report "mem_wb      = " & std_logic'image(mem_wb);
+	--report "exe_res     = 0x" & to_hstring(exe_res);
+	--report "exe_dest    = " & integer'image(to_integer(unsigned(exe_dest)));
+	--report "exe_wb      = " & std_logic'image(exe_wb);
+	--report "exe_flag_wb = " & std_logic'image(exe_flag_wb);
+	--report "mem_wb      = " & std_logic'image(mem_wb);
 	
-	report "reg_vv    = " & std_logic'image(reg_vv);
-	report "reg_cznv  = " & std_logic'image(reg_cznv);
-	report "inval_ovr = " & std_logic'image(inval_ovr);
-	report "inval_czn = " & std_logic'image(inval_czn);
-	report "regop_t   = " & std_logic'image(regop_t);
+	--report "reg_vv    = " & std_logic'image(reg_vv);
+	--report "reg_cznv  = " & std_logic'image(reg_cznv);
+	--report "inval_ovr = " & std_logic'image(inval_ovr);
+	--report "inval_czn = " & std_logic'image(inval_czn);
+	--report "regop_t   = " & std_logic'image(regop_t);
 
 
-	report "op1      = 0x" & to_hstring(op1);
-	report "op2      = 0x" & to_hstring(op2);
-	report "alu_dest = " & integer'image(to_integer(unsigned(alu_dest)));
-	report "flag_wb  = " & std_logic'image(flag_wb);
+	--report "op1      = 0x" & to_hstring(op1);
+	--report "op2      = 0x" & to_hstring(op2);
+	--report "alu_dest = " & integer'image(to_integer(unsigned(alu_dest)));
+	--report "flag_wb  = " & std_logic'image(flag_wb);
 	
-	report "comp_op1 = " & std_logic'image(comp_op1);
-	report "comp_op2 = " & std_logic'image(comp_op2);
+	--report "comp_op1 = " & std_logic'image(comp_op1);
+	--report "comp_op2 = " & std_logic'image(comp_op2);
 
-	report "alu_cmd = " & integer'image(to_integer(unsigned(alu_cmd)));
-	report "alu_cy  = " & std_logic'image(alu_cy);
+	--report "alu_cmd = " & integer'image(to_integer(unsigned(alu_cmd)));
+	--report "alu_cy  = " & std_logic'image(alu_cy);
 
-	report "shift_lsl = " & std_logic'image(shift_lsl);
-	report "shift_lsr = " & std_logic'image(shift_lsr);
-	report "shift_ror = " & std_logic'image(shift_ror);
-	report "shift_asr = " & std_logic'image(shift_asr);
-	report "shift_rrx = " & std_logic'image(shift_rrx);
-	report "shift_val = " & integer'image(to_integer(unsigned(shift_val)));
+	--report "dec_cy    = " & std_logic'image(dec_cy);
+	--report "shift_lsl = " & std_logic'image(shift_lsl);
+	--report "shift_lsr = " & std_logic'image(shift_lsr);
+	--report "shift_ror = " & std_logic'image(shift_ror);
+	--report "shift_asr = " & std_logic'image(shift_asr);
+	--report "shift_rrx = " & std_logic'image(shift_rrx);
+	--report "shift_val = " & integer'image(to_integer(unsigned(shift_val)));
 
-	report " ldr_i  = " & std_logic'image(ldr_i );
-	report " str_i  = " & std_logic'image(str_i );
-	report " ldrb_i = " & std_logic'image(ldrb_i);
-	report " strb_i = " & std_logic'image(strb_i); 
 
-	report "mult_count = "& to_hstring(mult_count);
-	report "mult_op1   = "& to_hstring(mult_op1); 
-	report "mult_op2   = "& to_hstring(mult_op2);
-	report "mult_AQQ_1 = "& to_hstring(mult_AQQ_1);
-	report "mult_start = "& std_logic'image(mult_start);
-	report "mult_t     = "& std_logic'image(mult_t);
-	report "mult_do_cal= "& std_logic'image(mult_do_calcul);
-	report "mult_inval = "& std_logic'image(mult_invalid);
-	report "rdata1     = "& to_hstring(rdata1);
-	report "rdata2     = "& to_hstring(rdata2);
-	report "rdata3     = "& to_hstring(rdata3);
-	report "mult_AQQ_1(64  downto 33);    = "& to_hstring(mult_AQQ_1(64  downto 33));
-	report "mult_AQQ_1(64  downto 0);    = "& to_hstring(mult_AQQ_1(64  downto 0));
-	report "mult_AQQ_1(32  downto 0);    = "& to_hstring(mult_AQQ_1(32  downto 0));
+	--report " ldr_i  = " & std_logic'image(ldr_i );
+	--report " str_i  = " & std_logic'image(str_i );
+	--report " ldrb_i = " & std_logic'image(ldrb_i);
+	--report " strb_i = " & std_logic'image(strb_i); 
+
+	--report "mult_count = "& to_hstring(mult_count);
+	--report "mult_op1   = "& to_hstring(mult_op1); 
+	--report "mult_op2   = "& to_hstring(mult_op2);
+	--report "mult_AQQ_1 = "& to_hstring(mult_AQQ_1);
+	--report "mult_start = "& std_logic'image(mult_start);
+	--report "mult_t     = "& std_logic'image(mult_t);
+	--report "mult_do_cal= "& std_logic'image(mult_do_calcul);
+	--report "mult_inval = "& std_logic'image(mult_invalid);
+	--report "rdata1     = "& to_hstring(rdata1);
+	--report "rdata2     = "& to_hstring(rdata2);
+	--report "rdata3     = "& to_hstring(rdata3);
+	--report "mult_AQQ_1(64  downto 33);    = "& to_hstring(mult_AQQ_1(64  downto 33));
+	--report "mult_AQQ_1(64  downto 0);    = "& to_hstring(mult_AQQ_1(64  downto 0));
+	--report "mult_AQQ_1(32  downto 0);    = "& to_hstring(mult_AQQ_1(32  downto 0));
 
 
 	    
@@ -986,17 +959,17 @@ begin
 	case cur_state is
 
 		when FETCH =>
-			report "--> state = FETCH";
+			--report "--> state = FETCH";
 		when RUN =>
-			report "--> state = RUN";
+			--report "--> state = RUN";
 		when BRANCH =>
-			report "--> state = BRANCH";
+			--report "--> state = BRANCH";
 		when LINK =>
-			report "--> state = LINK";
+			--report "--> state = LINK";
 		when MTRANS => 
-			report "--> state = MTRANS";
+			--report "--> state = MTRANS";
 		when MULT =>
-			report "--> state = MULT";
+			--report "--> state = MULT";
 		
 	end case;
 
@@ -1007,7 +980,7 @@ begin
 	case cur_state is
 
 	when FETCH =>
-		--report "--> FETCH";
+		----report "--> FETCH";
 		
 		debug_state  	<= X"1";
 
@@ -1030,7 +1003,7 @@ begin
 
 
 	when RUN =>
-		--report "--> RUN";
+		----report "--> RUN";
 
 		-- on change d'etat que si une instruction est a executer
 		if      operv = '1' 
@@ -1111,7 +1084,7 @@ begin
 		end if;
 		
 	when BRANCH =>
-		--report "--> BRANCH";
+		----report "--> BRANCH";
 
 		-- mtrans_loop_adr <= '0';
 
@@ -1129,11 +1102,11 @@ begin
 		-- changement d'etat
 		if if2dec_empty = '1' and dec2if_full = '0' then
 			next_state 	   <= FETCH;
-			--assert false report "return from branch" severity failure;
+			--assert false --report "return from branch" severity failure;
 		end if;
 
 	when LINK => 
-		--report "--> LINK";
+		----report "--> LINK";
 
 		dec2exe_push <= '1';
 		if2dec_pop   <= '1';
@@ -1147,7 +1120,7 @@ begin
 		next_state    <= BRANCH;
 
 	when MTRANS => 
-		--report "--> MTRANS";
+		----report "--> MTRANS";
 
 		if operv = '1' then
 			-- faire un transfert simple
@@ -1167,10 +1140,39 @@ begin
 			dec2exe_push <= '0';
 		end if;
 
+		-- Mtrans reg list
+		if (rising_edge(ck) and mtrans_shift = '1') then
+
+			mtrans_mask  <= mtrans_mask and mtrans_mask_shift;
+			mtrans_shift <= '0'; -- un transfert effectuer
+			
+			if    mtrans_op_2 = X"00000000" then mtrans_op_2 <= X"00000004";
+			elsif mtrans_op_2 = X"00000004" then mtrans_op_2 <= X"00000008";
+			elsif mtrans_op_2 = X"00000008" then mtrans_op_2 <= X"0000000C";
+			elsif mtrans_op_2 = X"0000000C" then mtrans_op_2 <= X"00000010";
+			elsif mtrans_op_2 = X"00000010" then mtrans_op_2 <= X"00000014";
+			elsif mtrans_op_2 = X"00000014" then mtrans_op_2 <= X"00000018";
+			elsif mtrans_op_2 = X"00000018" then mtrans_op_2 <= X"0000001C";
+			elsif mtrans_op_2 = X"0000001C" then mtrans_op_2 <= X"00000020";
+			elsif mtrans_op_2 = X"00000020" then mtrans_op_2 <= X"00000024";
+			elsif mtrans_op_2 = X"00000024" then mtrans_op_2 <= X"00000028";
+			elsif mtrans_op_2 = X"00000028" then mtrans_op_2 <= X"0000002C";
+			elsif mtrans_op_2 = X"0000002C" then mtrans_op_2 <= X"00000030";
+			elsif mtrans_op_2 = X"00000030" then mtrans_op_2 <= X"00000034";
+			elsif mtrans_op_2 = X"00000034" then mtrans_op_2 <= X"00000038";
+			elsif mtrans_op_2 = X"00000038" then mtrans_op_2 <= X"0000003C";
+			elsif mtrans_op_2 = X"0000003C" then mtrans_op_2 <= X"00000040";
+			elsif mtrans_op_2 = X"00000040" then mtrans_op_2 <= X"00000044";
+			elsif mtrans_op_2 = X"00000044" then mtrans_op_2 <= X"00000048";
+			elsif mtrans_op_2 = X"00000048" then mtrans_op_2 <= X"0000004C";
+			end if;
+
+		end if;
+
 	when MULT => 
 
 		--if clock_count = X"0000000A" then
-		--	assert false report "enter to mult" severity failure;
+		--	assert false --report "enter to mult" severity failure;
 		--end if;
 		
 		if mult_do_calcul = '1' then
@@ -1237,19 +1239,19 @@ begin
 			if (mult_AQQ_1(1 downto 0) = "01" or mult_AQQ_1(1 downto 0) = "10") then		
 				mult_do_calcul <= '1';
 				mult_count     <= mult_count(30 downto 0) & "0";
-				report "calcul";
+				--report "calcul";
 
 			else
 
 				if  mult_AQQ_1(1 downto 0) = "11" then
 					mult_AQQ_1 <= "1" & mult_AQQ_1(64 downto 1);
 					mult_count <= mult_count(30 downto 0) & "0";
-					report "shifting Moins";
+					--report "shifting Moins";
 
 				elsif mult_AQQ_1(1 downto 0) = "00" then 
 					mult_AQQ_1 <= "0" & mult_AQQ_1(64 downto 1);
 					mult_count <= mult_count(30 downto 0) & "0";
-					report "shifting Plus";
+					--report "shifting Plus";
 				end if; 
 			end if; 
 

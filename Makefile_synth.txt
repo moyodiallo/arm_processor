@@ -1,0 +1,190 @@
+all : exec decod ifetch mem.vst arm_core.vst arm_chip.vst
+exec : alu.vst shifter.vst fifo_72b.vst exec_model.vst
+decod : reg.vst fifo_32b.vst fifo_127b.vst decod_model.vst
+ifetch : ifetch.vst ifetch_model.vst
+
+#MBK_TARGET_LIB=/usr/share/alliance/cells/sxlib
+#MBK_TARGET_LIB=/soc/alliance/cells/sxlib
+
+include ./alliance-env.mk
+
+TARGET_LIB      = $(CELLS_TOP)/src/sxlib
+SPI_MODEL       = $(SYSCONF_TOP)/spimodel.cfg
+METAL_LEVEL     = 6
+
+ENV_VASY = MBK_WORK_LIB=.; export MBK_WORK_LIB;\
+	MBK_CATAL_NAME=NO_CATAL; export MBK_CATAL_NAME
+
+ENV_BOOM = MBK_WORK_LIB=.; export MBK_WORK_LIB;\
+	MBK_CATAL_NAME=CATAL; export MBK_CATAL_NAME
+
+ENV_BOOG = MBK_WORK_LIB=.; export MBK_WORK_LIB; \
+	MBK_IN_LO=vst; export MBK_IN_LO; \
+	MBK_OUT_LO=vst; export MBK_OUT_LO; \
+	MBK_TARGET_LIB=$(TARGET_LIB); export MBK_TARGET_LIB; \
+	MBK_CATAL_NAME=CATAL; export MBK_CATAL_NAME
+
+ENV_OCP =  MBK_WORK_LIB=.; export MBK_WORK_LIB; \
+	MBK_IN_LO=vst; export MBK_IN_LO; \
+	MBK_OUT_LO=vst; export MBK_OUT_LO; \
+	MBK_CATA_LIB=$(TARGET_LIB); export MBK_CATA_LIB; \
+	MBK_IN_PH=ap; export MBK_IN_PH; \
+	MBK_OUT_PH=ap; export MBK_OUT_PH; \
+	MBK_CATAL_NAME=CATAL; export MBK_CATAL_NAME
+
+ENV_ASIMUT_VASY = MBK_WORK_LIB=.; export MBK_WORK_LIB;\
+	MBK_CATAL_NAME=CATAL_ASIMUT_VASY; export MBK_CATAL_NAME;\
+	MBK_IN_LO=vst; export MBK_IN_LO;\
+	MBK_OUT_LO=vst; export MBK_OUT_LO
+
+ENV_ASIMUT_SYNTH = MBK_WORK_LIB=.; export MBK_WORK_LIB;\
+	MBK_CATAL_NAME=CATAL; export MBK_CATAL_NAME;\
+	MBK_CATA_LIB=$(TARGET_LIB); export MBK_CATA_LIB; \
+	MBK_IN_LO=vst; export MBK_IN_LO;\
+	MBK_OUT_LO=vst; export MBK_OUT_LO
+
+
+exec.vst : exec.vhdl alu.vst fifo_72b.vst shifter.vst
+	$(ENV_VASY);vasy -I vhdl -V -o -a -p exec.vhdl exec
+
+exec_model_o.vbe : exec.vst
+	$(ENV_BOOM);boom -V -O exec_model exec_model_o
+
+exec_model.vst : exec_model_o.vbe
+	$(ENV_BOOG);boog exec_model_o exec_model
+
+
+
+alu.vbe : alu.vhdl
+	$(ENV_VASY); vasy -I vhdl -V -o -a -C 8 alu.vhdl alu
+
+alu_o.vbe : alu.vbe
+	$(ENV_BOOM);boom -V -A -O alu alu_o
+
+alu.vst : alu_o.vbe
+	$(ENV_BOOG);boog alu_o alu
+
+
+
+shifter.vbe : shifter.vhdl
+	$(ENV_VASY);vasy -I vhdl -V -o -a -C 8 shifter.vhdl shifter
+
+shifter_o.vbe : shifter.vbe
+	$(ENV_BOOM);boom -V -A -O shifter shifter_o
+
+shifter.vst : shifter_o.vbe
+	$(ENV_BOOG);boog shifter_o shifter
+
+
+
+
+fifo_72b.vbe : fifo_72b.vhdl
+	$(ENV_VASY);vasy -I vhdl -V -o -a fifo_72b.vhdl fifo_72b
+
+fifo_72b_o.vbe : fifo_72b.vbe
+	$(ENV_BOOM);boom -V fifo_72b fifo_72b_o
+
+fifo_72b.vst : fifo_72b_o.vbe
+	$(ENV_BOOG);boog fifo_72b_o fifo_72b
+
+fifo_32b.vbe : fifo_32b.vhdl
+	$(ENV_VASY);vasy -I vhdl -V -o -a fifo_32b.vhdl fifo_32b
+
+fifo_32b_o.vbe : fifo_32b.vbe
+	$(ENV_BOOM);boom -V fifo_32b fifo_32b_o
+
+fifo_32b.vst : fifo_32b_o.vbe
+	$(ENV_BOOG);boog fifo_32b_o fifo_32b
+
+fifo_127b.vbe : fifo_127b.vhdl
+	$(ENV_VASY);vasy -I vhdl -V -o -a fifo_127b.vhdl fifo_127b
+
+fifo_127b_o.vbe : fifo_127b.vbe
+	$(ENV_BOOM);boom -V fifo_127b fifo_127b_o
+
+fifo_127b.vst : fifo_127b_o.vbe
+	$(ENV_BOOG);boog fifo_127b_o fifo_127b
+
+
+reg.vbe : reg.vhdl
+	$(ENV_VASY);vasy -I vhdl -V -o -a -C 8 reg.vhdl reg
+
+reg_o.vbe : reg.vbe
+	$(ENV_BOOM);boom -V -O reg reg_o
+
+reg.vst : reg_o.vbe
+	$(ENV_BOOG);boog reg_o reg
+
+
+
+decod_model_o.vbe : decod.vst decod_model.vbe
+	$(ENV_BOOM);boom -V -A -O decod_model decod_model_o
+
+decod_model.vst : decod_model_o.vbe
+	$(ENV_BOOG);boog decod_model_o decod_model
+
+exec.vhd : exec.vst
+	$(ENV_VASY);vasy -I vst -s -o -S exec exec
+
+decod.vst : decod.vhdl reg.vst fifo_32b.vst fifo_127b.vst
+	$(ENV_VASY);vasy -I vhdl -V -o -a -p decod.vhdl decod
+
+
+
+ifetch.vst : ifetch.vhdl fifo_32b.vst
+	$(ENV_VASY);vasy -I vhdl -V -o -a -p ifetch.vhdl ifetch
+
+ifetch_model_o.vbe : ifetch.vst ifetch_model.vbe
+	$(ENV_BOOM);boom -V ifetch_model ifetch_model_o
+
+ifetch_model.vst : ifetch_model_o.vbe
+	$(ENV_BOOG);boog ifetch_model_o ifetch_model
+
+
+
+mem.vbe : mem.vhdl
+	$(ENV_VASY);vasy -I vhdl -V -o -a -p mem.vhdl mem
+
+mem_o.vbe : mem.vbe
+	$(ENV_BOOM);boom -V mem mem_o
+
+mem.vst : mem_o.vbe
+	$(ENV_BOOG);boog mem_o mem
+
+
+
+arm_core.vst : arm_core.vhdl
+	$(ENV_VASY);vasy -I vhdl -V -o -a arm_core.vhdl arm_core
+
+
+arm_chip.vst : arm_chip.vhdl
+	$(ENV_VASY);vasy -I vhdl -V -o -a arm_chip.vhdl arm_chip
+
+
+res_vasy_alu_1.pat : alu.vst alu.vbe
+	$(ENV_ASIMUT_VASY); asimut alu alu_1 res_vasy_alu_1
+
+res_synth_alu_1.pat : alu.vst
+	$(ENV_ASIMUT_VASY); asimut -zd alu alu_1 res_synth_alu_1
+
+
+# ASIMUT
+res_vasy_1.pat : hadamard.vst calcul.vbe ram.vbe rom.vbe \
+		 compteur.vbe sequenceur.vbe hadamard_model.vbe
+	$(ENV_ASIMUT_VASY); asimut hadamard hadamard_1 res_vasy_1
+
+res_synth_1.pat : hadamard.vst calcul.vst ram.vst rom.vst \
+		 compteur.vst sequenceur.vst hadamard_model.vst
+	$(ENV_ASIMUT_SYNTH); asimut -zd hadamard hadamard_1 res_synth_1
+
+alu_p.ap :
+	$(ENV_OCP);ocp -v alu -margin 0.4 -gnuplot  alu alu_p
+
+# OCP
+hadamard_p.ap : res_synth_1.pat
+	$(ENV_OCP);ocp -v -ioc hadamard -margin 0.4 -gnuplot  hadamard hadamard_p
+
+#sed "/ENTITY/i\library cells;\nuse cells.all;\n" ${nomf}.vhd > ${nomf}_net.vhdl
+
+clean :
+	rm *.vbe *.vst

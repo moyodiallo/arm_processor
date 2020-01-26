@@ -224,12 +224,12 @@ begin
 -- comportement de l'architecture
 
 	-- shifter op2
-	shift_op2 <=  dec_op2 xor X"11111111" when dec_comp_op2 = '1' else dec_op2;
+	shift_op2 <=  dec_op2 xor X"FFFFFFFF" when dec_comp_op2 = '1' else dec_op2;
 
 	-- operandes (l'ajout du 1 de complement se fera avec la retenu)
-	alu_op1   <=  dec_op1 xor X"11111111" when dec_comp_op1 = '1' else dec_op1;
-	alu_op2   <= shift_op2; 
-	
+	alu_op1   <=  dec_op1 xor X"FFFFFFFF" when dec_comp_op1 = '1' else dec_op1;
+	alu_op2   <= shift_dout; 
+
 	mem_adr <=  res when dec_pre_index = '1' else alu_op1;
 
 	-- bypass to decod
@@ -238,12 +238,24 @@ begin
 	exe_flag_wb <= dec_flag_wb;	
 
 	-- quand la fifo qui alimente EXEC n'est pas vide
-	exe_pop  <= '1' when dec2exe_empty = '0' else '0'; -- vider
-	exe_push <= '1' when exe2mem_full  = '0' else '0'; -- remplir celle de EXE vers MEM
+	exe_push <= '1' when dec2exe_empty = '0' and exe2mem_full  = '0' else '0'; -- remplir de EXE vers MEM
+	exe_pop  <= exe_push;
 
 	-- operation arithmetique ou logique
 	exe_c <= alu_cout when dec_alu_cmd = "00" else shift_cout;
 
 	exe_res <= res;
+
+process (alu_op1, alu_op2, res, dec_comp_op1, dec_comp_op2)
+begin
+
+	report "OPPPP1 "& to_hstring(alu_op1);
+	report "OPPPP2 "& to_hstring(alu_op2);
+	report "OPPPPR "& to_hstring(res);
+
+	report "COOMP1 "& std_logic'image(dec_comp_op1);
+	report "COMMP2 "& std_logic'image(dec_comp_op2);
+
+end process;
 
 end Behavior;

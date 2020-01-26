@@ -362,10 +362,10 @@ begin
 	-- Exe Write Back to reg
 					exe_res			=> exe_res,
 
-					exe_c				=> exe_c,
-					exe_v				=> exe_v,
-					exe_n				=> exe_n,
-					exe_z				=> exe_z,
+					exe_c			=> exe_c,
+					exe_v			=> exe_v,
+					exe_n			=> exe_n,
+					exe_z			=> exe_z,
 
 					exe_dest			=> exe_dest,
 					exe_wb			=> exe_wb,
@@ -436,12 +436,12 @@ begin
 	-- Exe bypass to decod
 					exe_res			=> exe_res,
 
-					exe_c				=> exe_c,
-					exe_v				=> exe_v,
-					exe_n				=> exe_n,
-					exe_z				=> exe_z,
+					exe_c			=> exe_c,
+					exe_v			=> exe_v,
+					exe_n			=> exe_n,
+					exe_z			=> exe_z,
 
-					exe_dest			=> exe_dest,
+					exe_dest		=> exe_dest,
 					exe_wb			=> exe_wb,
 					exe_flag_wb		=> exe_flag_wb,
 
@@ -480,18 +480,18 @@ begin
 
 	-- Mem WB
 					mem_res			=> mem_res,
-					mem_dest			=> mem_dest,
+					mem_dest		=> mem_dest,
 					mem_wb			=> mem_wb,
 			
 	-- Dcache interface
 					mem_adr			=> mem_adr,
 					mem_stw			=> mem_stw,
 					mem_stb			=> mem_stb,
-					mem_load			=> mem_load,
+					mem_load		=> mem_load,
 
-					mem_data			=> mem_data,
+					mem_data		=> mem_data,
 					dc_data			=> dc_data,
-					dc_stall			=> dc_stall,
+					dc_stall		=> dc_stall,
 
 	-- global interface
 					vdd	 			=> vdd,

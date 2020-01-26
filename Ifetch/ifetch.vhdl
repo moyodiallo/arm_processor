@@ -9,7 +9,7 @@ entity IFetch is
 			if_adr_valid	: out Std_Logic;
 
 			ic_inst			: in Std_Logic_Vector(31 downto 0) ;
-			ic_stall			: in Std_Logic;
+			ic_stall		: in Std_Logic;
 
 	-- Decode interface
 			dec2if_empty	: in Std_Logic;
@@ -21,7 +21,7 @@ entity IFetch is
 			dec_pop			: in Std_Logic;
 
 	-- global interface
-			ck					: in Std_Logic;
+			ck				: in Std_Logic;
 			reset_n			: in Std_Logic;
 			vdd				: in bit;
 			vss				: in bit);
@@ -57,24 +57,24 @@ signal if2dec_full	: std_logic;
 begin
 
 	if2dec : fifo_32b
-	port map (	din		=> ic_inst,
-					dout		=> if_ir,
+	port map (		din		=> ic_inst,
+					dout	=> if_ir,
 
-					push		 => if2dec_push,
-					pop		 => dec_pop,
+					push	=> if2dec_push,
+					pop		=> dec_pop,
 
-					empty		 => if2dec_empty,
-					full		 => if2dec_full,
+					empty	=> if2dec_empty,
+					full	=> if2dec_full,
 
 					reset_n	 => reset_n,
-					ck			 => ck,
+					ck		 => ck,
 					vdd		 => vdd,
 					vss		 => vss);
 
 
 	if_adr_valid <= '1' when dec2if_empty = '0' else '0';
-	if_pop <= '1' when dec2if_empty = '0' and ic_stall = '0' and if2dec_full = '0' else '0';
-	if2dec_push <= '1' when dec2if_empty = '0' and ic_stall = '0' and if2dec_full = '0' else '0';
+	if_pop 	     <= '1' when dec2if_empty = '0' and ic_stall = '0' and if2dec_full = '0' else '0';
+	if2dec_push  <= '1' when dec2if_empty = '0' and ic_stall = '0' and if2dec_full = '0' else '0';
 
 	if_adr <= dec_pc;
 end Behavior;

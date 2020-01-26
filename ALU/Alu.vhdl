@@ -32,7 +32,7 @@ with cmd select
 res <= s(31 downto 0);
 cout <= s(32);
 v <= (op1(31) xnor op2(31)) and (op1(31) xor s(31));
-z <= '1' when s(31 downto 0) = "00000000000000000000000000000000" else 
-     '0';
+z <= '1' when s(31 downto 0) = "00000000000000000000000000000000" else '0';
 n <= s(31);
+
 end archi;
